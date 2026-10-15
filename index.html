@@ -23,7 +23,7 @@
     .header-top { display: flex; justify-content: space-between; align-items: center; }
     .title { font-size: 1.25rem; font-weight: bold; color: var(--accent-glow); }
     
-    /* 타이머 알림음 설정 툴바 */
+    /* 고출력 타이머 알림음 설정 툴바 */
     .alert-settings { background: #222222; border-radius: 8px; padding: 10px; margin-top: 10px; border: 1px solid #333; }
     .alert-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 0.8rem; color: #ccc; }
     .alert-row:last-child { margin-bottom: 0; }
@@ -95,16 +95,16 @@
       <div class="alert-row">
         <span style="width: 75px;">🔔 소리 종류:</span>
         <select class="sound-select" id="soundPreset" onchange="changeSoundPreset(this.value)">
-          <option value="buzzer">체육관 부저 (비트 관통)</option>
-          <option value="whistle">전자 호각 (고주파 휘슬)</option>
-          <option value="siren">경고 사이렌 (고주파 교차)</option>
+          <option value="airhorn">스타디움 에어혼 (최대 음압)</option>
+          <option value="buzzer">체육관 복싱 부저 (비트 관통)</option>
+          <option value="whistle">고출력 전자 호각 (초고주파)</option>
         </select>
         <button class="btn-action" style="margin-left:auto;" onclick="testTimerSound()">소리 테스트</button>
       </div>
       <div class="alert-row">
         <span style="width: 75px;">🔊 알림 음량:</span>
-        <input type="range" class="vol-slider" id="timerVolume" min="0" max="100" value="95" oninput="updateVolume(this.value)">
-        <span id="volLabel" style="width: 38px; text-align: right;">95%</span>
+        <input type="range" class="vol-slider" id="timerVolume" min="0" max="100" value="100" oninput="updateVolume(this.value)">
+        <span id="volLabel" style="width: 38px; text-align: right;">100%</span>
       </div>
     </div>
   </header>
@@ -201,8 +201,8 @@
     if (currentDay === 0) currentDay = 1;
 
     let workoutState = JSON.parse(localStorage.getItem('fitmaster_state') || '{}');
-    let timerVolume = parseInt(localStorage.getItem('fitmaster_timer_vol') || '95');
-    let soundPreset = localStorage.getItem('fitmaster_sound_preset') || 'buzzer';
+    let timerVolume = parseInt(localStorage.getItem('fitmaster_timer_vol') || '100');
+    let soundPreset = localStorage.getItem('fitmaster_sound_preset') || 'airhorn';
 
     function initSoundSettings() {
       const slider = document.getElementById('timerVolume');
@@ -224,9 +224,10 @@
       localStorage.setItem('fitmaster_sound_preset', soundPreset);
     }
 
+    // --- 고출력 다이내믹스 컴프레서 + 멀티 오실레이터 알림 엔진 ---
     function triggerNonIntrusiveAlert() {
       if (navigator.vibrate) {
-        navigator.vibrate([300, 100, 300, 100, 600]);
+        navigator.vibrate([300, 100, 300, 100, 700]);
       }
       
       if (timerVolume === 0) return;
@@ -236,61 +237,95 @@
         if (!AudioCtx) return;
         const ctx = new AudioCtx();
         const now = ctx.currentTime;
-        const gainScale = (timerVolume / 100) * 0.95;
+        
+        // 마스터 게인 및 음압을 꽉 채우는 다이내믹스 컴프레서 체인
+        const masterGain = ctx.createGain();
+        const compressor = ctx.createDynamicsCompressor();
+        compressor.threshold.setValueAtTime(-20, now);
+        compressor.knee.setValueAtTime(10, now);
+        compressor.ratio.setValueAtTime(16, now);
+        compressor.attack.setValueAtTime(0.003, now);
+        compressor.release.setValueAtTime(0.15, now);
 
-        if (soundPreset === 'buzzer') {
-          const pulses = [0, 0.22, 0.44];
-          pulses.forEach((t, i) => {
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.type = 'square';
-            osc.frequency.setValueAtTime(i === 2 ? 3400 : 2800, now + t);
+        // 출력 레벨 증폭
+        masterGain.gain.setValueAtTime((timerVolume / 100) * 1.4, now);
+        masterGain.connect(compressor);
+        compressor.connect(ctx.destination);
 
-            gain.gain.setValueAtTime(0.001, now + t);
-            gain.gain.exponentialRampToValueAtTime(gainScale, now + t + 0.02);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + t + (i === 2 ? 0.35 : 0.15));
+        if (soundPreset === 'airhorn') {
+          // [스타디움 에어혼] 370Hz, 466Hz, 554Hz, 1108Hz 4개 배음 동시 발진 3연타
+          const freqs = [370, 466, 554, 1108];
+          const bursts = [0, 0.16, 0.34];
+          bursts.forEach((t, bIdx) => {
+            const dur = (bIdx === 2) ? 0.45 : 0.12;
+            freqs.forEach(f => {
+              const osc = ctx.createOscillator();
+              const gain = ctx.createGain();
+              osc.type = 'sawtooth';
+              osc.frequency.setValueAtTime(f, now + t);
+              
+              gain.gain.setValueAtTime(0.001, now + t);
+              gain.gain.linearRampToValueAtTime(0.35, now + t + 0.02);
+              gain.gain.exponentialRampToValueAtTime(0.001, now + t + dur);
 
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            osc.start(now + t);
-            osc.stop(now + t + (i === 2 ? 0.35 : 0.15));
+              osc.connect(gain);
+              gain.connect(masterGain);
+              osc.start(now + t);
+              osc.stop(now + t + dur);
+            });
           });
 
-        } else if (soundPreset === 'whistle') {
-          [0, 0.25].forEach((t) => {
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.type = 'sawtooth';
-            osc.frequency.setValueAtTime(2400, now + t);
-            osc.frequency.exponentialRampToValueAtTime(4200, now + t + 0.18);
+        } else if (soundPreset === 'buzzer') {
+          // [체육관 복싱 부저] 중역(700Hz) + 고역(3,200Hz) 사각파 더블 펀치 3연타
+          const pulses = [0, 0.22, 0.44];
+          pulses.forEach((t, i) => {
+            const dur = (i === 2) ? 0.45 : 0.16;
+            [700, 3200].forEach(freq => {
+              const osc = ctx.createOscillator();
+              const gain = ctx.createGain();
+              osc.type = 'square';
+              osc.frequency.setValueAtTime(freq, now + t);
 
-            gain.gain.setValueAtTime(0.001, now + t);
-            gain.gain.exponentialRampToValueAtTime(gainScale, now + t + 0.02);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + t + 0.2);
+              gain.gain.setValueAtTime(0.001, now + t);
+              gain.gain.linearRampToValueAtTime(0.4, now + t + 0.01);
+              gain.gain.exponentialRampToValueAtTime(0.001, now + t + dur);
 
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            osc.start(now + t);
-            osc.stop(now + t + 0.2);
+              osc.connect(gain);
+              gain.connect(masterGain);
+              osc.start(now + t);
+              osc.stop(now + t + dur);
+            });
           });
 
         } else {
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.type = 'triangle';
-          
-          for (let i = 0; i < 6; i++) {
-            osc.frequency.setValueAtTime(i % 2 === 0 ? 3000 : 3800, now + (i * 0.1));
-          }
+          // [고출력 전자 호각] 2,600Hz~4,600Hz 급격 스윕 + 5,200Hz~7,000Hz 초고음 하모닉스
+          [0, 0.22].forEach(t => {
+            const dur = 0.2;
+            const osc = ctx.createOscillator();
+            const oscHarmonic = ctx.createOscillator();
+            const gain = ctx.createGain();
 
-          gain.gain.setValueAtTime(0.001, now);
-          gain.gain.exponentialRampToValueAtTime(gainScale, now + 0.03);
-          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.65);
+            osc.type = 'sawtooth';
+            oscHarmonic.type = 'square';
 
-          osc.connect(gain);
-          gain.connect(ctx.destination);
-          osc.start(now);
-          osc.stop(now + 0.65);
+            osc.frequency.setValueAtTime(2600, now + t);
+            osc.frequency.exponentialRampToValueAtTime(4600, now + t + dur);
+            oscHarmonic.frequency.setValueAtTime(5200, now + t);
+            oscHarmonic.frequency.exponentialRampToValueAtTime(7000, now + t + dur);
+
+            gain.gain.setValueAtTime(0.001, now + t);
+            gain.gain.linearRampToValueAtTime(0.35, now + t + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + t + dur);
+
+            osc.connect(gain);
+            oscHarmonic.connect(gain);
+            gain.connect(masterGain);
+
+            osc.start(now + t);
+            oscHarmonic.start(now + t);
+            osc.stop(now + t + dur);
+            oscHarmonic.stop(now + t + dur);
+          });
         }
       } catch (e) {
         console.log("Audio play error:", e);
@@ -356,7 +391,7 @@
         document.getElementById('weekIndicator').innerText = `루틴 ${currentWeekType} (${currentWeekType === 'A' ? '홀수주' : '짝수주'})`;
         renderWeightRoutine(routine, content);
       } else {
-        weekBox.style.display = 'none'; // 유산소 날에는 격주 토글 숨김
+        weekBox.style.display = 'none';
         renderCardioRoutine(routine, content);
       }
     }
@@ -463,7 +498,7 @@
       renderApp();
     }
 
-    // --- 유산소 기능 (단위 km 및 누적 거리 완벽 연동) ---
+    // --- 유산소 기능 (km 연동) ---
     let watchId = null;
     let runStartTime = null;
     let runDistanceKm = 0;
@@ -473,7 +508,7 @@
 
     function renderCardioRoutine(routine, container) {
       document.getElementById('summaryTitle').innerText = '누적 러닝 거리';
-      calculateTotalCardio(); // 누적 km 계산 실행
+      calculateTotalCardio();
 
       const lastRun = JSON.parse(localStorage.getItem('last_run_record') || 'null');
 
@@ -512,7 +547,6 @@
       container.appendChild(card);
     }
 
-    // 누적 러닝 거리(km) 계산
     function calculateTotalCardio() {
       const history = JSON.parse(localStorage.getItem('fitmaster_run_history') || '[]');
       let total = history.reduce((sum, item) => sum + (parseFloat(item.dist) || 0), 0);
@@ -606,10 +640,8 @@
         timestamp: Date.now()
       };
       
-      // 최근 기록 저장
       localStorage.setItem('last_run_record', JSON.stringify(record));
       
-      // 누적 히스토리에 추가
       const history = JSON.parse(localStorage.getItem('fitmaster_run_history') || '[]');
       history.push(record);
       localStorage.setItem('fitmaster_run_history', JSON.stringify(history));
