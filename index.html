@@ -32,7 +32,7 @@
     .btn-action { background: #333; color: #fff; border: 1px solid #444; padding: 5px 10px; border-radius: 6px; font-size: 0.8rem; cursor: pointer; }
     .btn-action:active { background: var(--accent); }
     
-    /* 요일 탭 */
+    /* 요일 탭 (월~토) */
     .day-tabs { display: flex; overflow-x: auto; gap: 6px; padding: 12px 16px; background: #161616; border-bottom: 1px solid var(--border); }
     .day-tab { padding: 6px 14px; border-radius: 16px; background: #262626; color: var(--text-muted); font-size: 0.85rem; border: none; cursor: pointer; white-space: nowrap; }
     .day-tab.active { background: var(--accent); color: #fff; font-weight: bold; }
@@ -109,7 +109,7 @@
     </div>
   </header>
 
-  <!-- 요일 선택 탭 -->
+  <!-- 요일 선택 탭 (일요일 제외: 월~토) -->
   <div class="day-tabs" id="dayTabs">
     <button class="day-tab" data-day="1">월 (유산소)</button>
     <button class="day-tab" data-day="2">화 (가슴/삼두)</button>
@@ -117,7 +117,6 @@
     <button class="day-tab" data-day="4">목 (등/이두)</button>
     <button class="day-tab" data-day="5">금 (유산소)</button>
     <button class="day-tab" data-day="6">토 (하체/어깨)</button>
-    <button class="day-tab" data-day="0">일 (자유/휴식)</button>
   </div>
 
   <!-- 메인 요약 바 -->
@@ -185,8 +184,7 @@
       },
       1: { type: 'cardio', title: '월요일: 유산소 러닝' },
       3: { type: 'cardio', title: '수요일: 유산소 러닝' },
-      5: { type: 'cardio', title: '금요일: 유산소 러닝' },
-      0: { type: 'cardio', title: '일요일: 자유 유산소 / 회복' }
+      5: { type: 'cardio', title: '금요일: 유산소 러닝' }
     };
 
     function getWeekType() {
@@ -200,6 +198,9 @@
 
     let currentWeekType = getWeekType();
     let currentDay = new Date().getDay();
+    // 일요일(0) 접속 시 기본 선택을 월요일(1)로 자동 보정
+    if (currentDay === 0) currentDay = 1;
+
     let workoutState = JSON.parse(localStorage.getItem('fitmaster_state') || '{}');
     let timerVolume = parseInt(localStorage.getItem('fitmaster_timer_vol') || '95');
     let soundPreset = localStorage.getItem('fitmaster_sound_preset') || 'buzzer';
