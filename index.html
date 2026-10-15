@@ -23,16 +23,25 @@
     .header-top { display: flex; justify-content: space-between; align-items: center; }
     .title { font-size: 1.25rem; font-weight: bold; color: var(--accent-glow); }
     
-    /* 타이머 알림음 설정 툴바 */
-    .alert-settings { background: #222222; border-radius: 8px; padding: 10px; margin-top: 10px; border: 1px solid #333; }
-    .alert-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 0.8rem; color: #ccc; }
+    /* 음악 및 알림 바 */
+    .music-bar { background: #242424; border-radius: 10px; margin-top: 10px; padding: 10px; }
+    .music-controls { display: flex; gap: 8px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+    .btn-music { background: #333; color: #fff; border: 1px solid #444; padding: 6px 10px; border-radius: 6px; font-size: 0.8rem; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; }
+    .btn-music:active { background: var(--accent); }
+    
+    /* 강력 알림 사운드 제어 */
+    .alert-settings { background: #1a1a1a; border-radius: 8px; padding: 8px 10px; margin-top: 8px; border: 1px solid #333; }
+    .alert-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 0.8rem; color: #ccc; }
     .alert-row:last-child { margin-bottom: 0; }
     .vol-slider { flex: 1; accent-color: var(--accent); cursor: pointer; }
     .sound-select { background: #2a2a2a; color: #fff; border: 1px solid #444; border-radius: 4px; padding: 4px 6px; font-size: 0.8rem; }
-    .btn-action { background: #333; color: #fff; border: 1px solid #444; padding: 5px 10px; border-radius: 6px; font-size: 0.8rem; cursor: pointer; }
-    .btn-action:active { background: var(--accent); }
     
-    /* 요일 탭 (월~토) */
+    #ytPlayerContainer { margin-top: 10px; display: none; width: 100%; border-radius: 8px; overflow: hidden; }
+    #ytPlayerContainer iframe { width: 100%; height: 190px; border: none; }
+    .yt-input-group { display: flex; gap: 6px; margin-top: 8px; }
+    .yt-input-group input { flex: 1; background: #121212; border: 1px solid #444; color: #fff; padding: 6px 8px; border-radius: 6px; font-size: 0.8rem; }
+    
+    /* 요일 탭 */
     .day-tabs { display: flex; overflow-x: auto; gap: 6px; padding: 12px 16px; background: #161616; border-bottom: 1px solid var(--border); }
     .day-tab { padding: 6px 14px; border-radius: 16px; background: #262626; color: var(--text-muted); font-size: 0.85rem; border: none; cursor: pointer; white-space: nowrap; }
     .day-tab.active { background: var(--accent); color: #fff; font-weight: bold; }
@@ -70,7 +79,7 @@
     .btn-start { background: var(--success); color: #000; }
     .btn-stop { background: #d32f2f; color: #fff; }
 
-    /* 휴식 타이머 플로팅 바 (기본 1분) */
+    /* 휴식 타이머 플로팅 바 */
     .timer-overlay { position: fixed; bottom: 0; left: 0; right: 0; background: #182834; border-top: 2px solid var(--accent); padding: 12px 16px; display: none; justify-content: space-between; align-items: center; z-index: 200; box-shadow: 0 -4px 12px rgba(0,0,0,0.5); }
     .timer-overlay.active { display: flex; }
     .timer-text { font-size: 1.4rem; font-weight: bold; color: #64b5f6; }
@@ -90,26 +99,49 @@
       </div>
     </div>
 
-    <!-- 타이머 알림음 설정 바 -->
-    <div class="alert-settings">
-      <div class="alert-row">
-        <span style="width: 75px;">🔔 소리 종류:</span>
-        <select class="sound-select" id="soundPreset" onchange="changeSoundPreset(this.value)">
-          <option value="buzzer">체육관 부저 (비트 관통)</option>
-          <option value="whistle">전자 호각 (고주파 휘슬)</option>
-          <option value="siren">경고 사이렌 (고주파 교차)</option>
-        </select>
-        <button class="btn-action" style="margin-left:auto;" onclick="testTimerSound()">소리 테스트</button>
+    <!-- 음악 / 알림 사운드 제어 -->
+    <div class="music-bar">
+      <div class="music-controls">
+        <span style="font-size:0.8rem; color:#aaa;">🎵 외부 플레이어:</span>
+        <button class="btn-music" onclick="toggleYtPlayer()">▶ 유튜브 플레이어</button>
+        <a class="btn-music" href="https://music.youtube.com" target="_blank">YT Music</a>
+        <a class="btn-music" href="https://open.spotify.com" target="_blank">Spotify</a>
       </div>
-      <div class="alert-row">
-        <span style="width: 75px;">🔊 알림 음량:</span>
-        <input type="range" class="vol-slider" id="timerVolume" min="0" max="100" value="95" oninput="updateVolume(this.value)">
-        <span id="volLabel" style="width: 38px; text-align: right;">95%</span>
+
+      <!-- 강력 알림 사운드 툴바 -->
+      <div class="alert-settings">
+        <div class="alert-row">
+          <span style="width: 70px;">🔔 소리 종류:</span>
+          <select class="sound-select" id="soundPreset" onchange="changeSoundPreset(this.value)">
+            <option value="buzzer">체육관 부저 (비트 관통)</option>
+            <option value="whistle">전자 호각 (고주파 휘슬)</option>
+            <option value="siren">경고 사이렌 (고주파 교차)</option>
+          </select>
+          <button class="btn-music" style="margin-left:auto;" onclick="testTimerSound()">소리 테스트</button>
+        </div>
+        <div class="alert-row">
+          <span style="width: 70px;">🔊 알림 음량:</span>
+          <input type="range" class="vol-slider" id="timerVolume" min="0" max="100" value="95" oninput="updateVolume(this.value)">
+          <span id="volLabel" style="width: 38px; text-align: right;">95%</span>
+        </div>
+      </div>
+
+      <div id="ytPlayerContainer">
+        <iframe id="ytIframe" src="" allow="autoplay; encrypted-media"></iframe>
+        <div class="yt-input-group">
+          <input type="text" id="ytUrlInput" placeholder="유튜브 영상 또는 재생목록 링크 입력">
+          <button class="btn-music" onclick="loadCustomYt()">재생</button>
+        </div>
+        <div style="display:flex; gap:6px; margin-top:6px;">
+          <button class="btn-music" style="flex:1;" onclick="loadPresetYt('PLFgquLnL59alW3xmYiWRaoz0oM3H17Lth')">🔥 헬스 EDM</button>
+          <button class="btn-music" style="flex:1;" onclick="loadPresetYt('PLDIoUOhQQPlXr63I_vwF9GD8sAKh77dWU')">⚡ 파워 힙합</button>
+          <button class="btn-music" style="flex:1;" onclick="loadPresetYt('PLOzDu-MXXL3g1X7WvE4sL9mP7B5UuIeQ5')">🎧 집중 로파이</button>
+        </div>
       </div>
     </div>
   </header>
 
-  <!-- 요일 선택 탭 (월~토) -->
+  <!-- 요일 선택 탭 -->
   <div class="day-tabs" id="dayTabs">
     <button class="day-tab" data-day="1">월 (유산소)</button>
     <button class="day-tab" data-day="2">화 (가슴/삼두)</button>
@@ -117,6 +149,7 @@
     <button class="day-tab" data-day="4">목 (등/이두)</button>
     <button class="day-tab" data-day="5">금 (유산소)</button>
     <button class="day-tab" data-day="6">토 (하체/어깨)</button>
+    <button class="day-tab" data-day="0">일 (자유/휴식)</button>
   </div>
 
   <!-- 메인 요약 바 -->
@@ -134,11 +167,11 @@
   <!-- 운동 콘텐츠 영역 -->
   <div class="container" id="contentArea"></div>
 
-  <!-- 플로팅 휴식 타이머 바 (기본 1분) -->
+  <!-- 플로팅 휴식 타이머 바 -->
   <div class="timer-overlay" id="timerOverlay">
     <div>
       <div style="font-size: 0.75rem; color:#90caf9;">휴식 타이머 (음악 방해 없음)</div>
-      <div class="timer-text" id="timerDisplay">01:00</div>
+      <div class="timer-text" id="timerDisplay">01:30</div>
     </div>
     <div class="timer-btns">
       <button class="btn-timer-action" onclick="adjustTimer(30)">+30초</button>
@@ -184,7 +217,8 @@
       },
       1: { type: 'cardio', title: '월요일: 유산소 러닝' },
       3: { type: 'cardio', title: '수요일: 유산소 러닝' },
-      5: { type: 'cardio', title: '금요일: 유산소 러닝' }
+      5: { type: 'cardio', title: '금요일: 유산소 러닝' },
+      0: { type: 'cardio', title: '일요일: 자유 유산소 / 회복' }
     };
 
     function getWeekType() {
@@ -198,12 +232,11 @@
 
     let currentWeekType = getWeekType();
     let currentDay = new Date().getDay();
-    if (currentDay === 0) currentDay = 1;
-
     let workoutState = JSON.parse(localStorage.getItem('fitmaster_state') || '{}');
     let timerVolume = parseInt(localStorage.getItem('fitmaster_timer_vol') || '95');
     let soundPreset = localStorage.getItem('fitmaster_sound_preset') || 'buzzer';
 
+    // 볼륨 및 사운드 프리셋 설정 초기화
     function initSoundSettings() {
       const slider = document.getElementById('timerVolume');
       const label = document.getElementById('volLabel');
@@ -224,7 +257,9 @@
       localStorage.setItem('fitmaster_sound_preset', soundPreset);
     }
 
+    // --- 강렬한 비트를 관통하는 차세대 알림 엔진 ---
     function triggerNonIntrusiveAlert() {
+      // 1) 묵직한 진동 패턴 (단발이 아닌 리듬감 있는 강한 진동)
       if (navigator.vibrate) {
         navigator.vibrate([300, 100, 300, 100, 600]);
       }
@@ -236,9 +271,10 @@
         if (!AudioCtx) return;
         const ctx = new AudioCtx();
         const now = ctx.currentTime;
-        const gainScale = (timerVolume / 100) * 0.95;
+        const gainScale = (timerVolume / 100) * 0.95; // 높은 헤드룸 게인
 
         if (soundPreset === 'buzzer') {
+          // [체육관 전자 부저] 배음이 풍부한 Square파형 + 2,800Hz 고주파 버저 3연타
           const pulses = [0, 0.22, 0.44];
           pulses.forEach((t, i) => {
             const osc = ctx.createOscillator();
@@ -257,6 +293,7 @@
           });
 
         } else if (soundPreset === 'whistle') {
+          // [전자 호각] 2,400Hz -> 4,000Hz 급격 주파수 스윕 (음악을 뚫고 찌르는 소리)
           [0, 0.25].forEach((t) => {
             const osc = ctx.createOscillator();
             const gain = ctx.createGain();
@@ -275,6 +312,7 @@
           });
 
         } else {
+          // [경고 사이렌] 3,000Hz와 3,800Hz를 고속 왕복
           const osc = ctx.createOscillator();
           const gain = ctx.createGain();
           osc.type = 'triangle';
@@ -301,11 +339,11 @@
       triggerNonIntrusiveAlert();
     }
 
-    // --- 휴식 타이머 로직 (기본 60초) ---
+    // --- 휴식 타이머 로직 ---
     let timerInterval = null;
-    let timerRemaining = 60;
+    let timerRemaining = 90;
 
-    function startRestTimer(seconds = 60) {
+    function startRestTimer(seconds = 90) {
       clearInterval(timerInterval);
       timerRemaining = seconds;
       const overlay = document.getElementById('timerOverlay');
@@ -416,8 +454,7 @@
 
       if (isDone) {
         localStorage.setItem(`last_${exId}_${setIndex}`, JSON.stringify({ w: weight, r: reps }));
-        // 완료 즉시 기본 60초 휴식 타이머 시작
-        startRestTimer(60);
+        startRestTimer(90);
       }
       renderApp();
     }
@@ -569,6 +606,37 @@
       localStorage.setItem('last_run_record', JSON.stringify(record));
       alert(`러닝 종료! 기록이 저장되었습니다.\n거리: ${record.dist}km | 시간: ${record.time}`);
       renderApp();
+    }
+
+    // --- 유튜브 플레이어 ---
+    function toggleYtPlayer() {
+      const container = document.getElementById('ytPlayerContainer');
+      container.style.display = container.style.display === 'block' ? 'none' : 'block';
+      if (container.style.display === 'block' && !document.getElementById('ytIframe').src) {
+        loadPresetYt('PLDIoUOhQQPlXr63I_vwF9GD8sAKh77dWU');
+      }
+    }
+
+    function loadPresetYt(playlistId) {
+      document.getElementById('ytPlayerContainer').style.display = 'block';
+      document.getElementById('ytIframe').src = `https://www.youtube.com/embed/videoseries?list=${playlistId}&autoplay=1`;
+    }
+
+    function loadCustomYt() {
+      const val = document.getElementById('ytUrlInput').value.trim();
+      if (!val) return;
+      let vidId = '';
+      if (val.includes('v=')) vidId = val.split('v=')[1].split('&')[0];
+      else if (val.includes('youtu.be/')) vidId = val.split('youtu.be/')[1].split('?')[0];
+      else if (val.includes('list=')) {
+        const listId = val.split('list=')[1].split('&')[0];
+        loadPresetYt(listId);
+        return;
+      } else vidId = val;
+
+      if (vidId) {
+        document.getElementById('ytIframe').src = `https://www.youtube.com/embed/${vidId}?autoplay=1`;
+      }
     }
 
     // --- 데이터 백업 및 복원 ---
