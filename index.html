@@ -41,6 +41,7 @@
     .summary-card { background: var(--card-bg); margin: 14px 16px; padding: 14px; border-radius: 12px; border: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
     .summary-title { font-size: 0.8rem; color: var(--text-muted); }
     .summary-val { font-size: 1.3rem; font-weight: bold; color: var(--accent-glow); margin-top: 4px; }
+    .bodyweight-input { width: 50px; background: #151515; border: 1px solid #444; color: #fff; text-align: center; border-radius: 4px; padding: 2px 4px; font-size: 0.8rem; }
     .week-toggle { background: #2e2e2e; border: 1px solid #444; color: #fff; padding: 6px 10px; border-radius: 6px; font-size: 0.75rem; cursor: pointer; }
 
     /* 운동 카드 */
@@ -49,6 +50,7 @@
     .ex-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
     .ex-name { font-size: 1.05rem; font-weight: bold; }
     .ex-target { font-size: 0.8rem; color: var(--accent-glow); }
+    .assist-badge { font-size: 0.72rem; color: #ffb74d; margin-left: 4px; }
     .ex-memo { width: 100%; background: #151515; border: 1px solid #333; color: #bbb; padding: 6px 8px; border-radius: 6px; font-size: 0.75rem; margin-bottom: 10px; }
 
     .set-row { display: grid; grid-template-columns: 36px 1fr 1fr 48px; gap: 6px; align-items: center; margin-bottom: 8px; }
@@ -124,6 +126,9 @@
     <div>
       <div class="summary-title" id="summaryTitle">오늘의 총 볼륨</div>
       <div class="summary-val" id="summaryValue">0 kg</div>
+      <div style="font-size: 0.75rem; color: #888; margin-top: 5px;" id="bodyweightBox">
+        내 체중: <input type="number" class="bodyweight-input" id="userBodyweight" value="75" oninput="updateBodyweight(this.value)"> kg
+      </div>
     </div>
     <div style="text-align: right;" id="weekControlBox">
       <div style="font-size:0.75rem; color:#888; margin-bottom:4px;" id="weekIndicator">루틴 A (홀수주)</div>
@@ -154,7 +159,7 @@
         exercises: [
           { id: 'tue_1', nameA: '인클라인 벤치 프레스', nameB: '벤치 프레스', sets: 4, targetReps: 10, biweekly: true },
           { id: 'tue_2', name: '인클라인 덤벨 프레스', sets: 4, targetReps: 12 },
-          { id: 'tue_3', name: '딥스', sets: 3, targetReps: 15 },
+          { id: 'tue_3', name: '딥스', sets: 3, targetReps: 15, isAssist: true },
           { id: 'tue_4', name: '케이블 오버 익스텐션', sets: 3, targetReps: 12 },
           { id: 'tue_5', name: '케이블 푸쉬 다운', sets: 3, targetReps: 12 }
         ]
@@ -164,7 +169,7 @@
         title: '목요일: 등 / 이두',
         exercises: [
           { id: 'thu_1', name: '암풀다운', sets: 3, targetReps: 15 },
-          { id: 'thu_2', nameA: '렛풀다운', nameB: '턱걸이', sets: 4, targetReps: 10, biweekly: true },
+          { id: 'thu_2', nameA: '렛풀다운', nameB: '턱걸이', sets: 4, targetReps: 10, biweekly: true, isAssistB: true },
           { id: 'thu_3', name: '바벨로우', sets: 3, targetReps: 12 },
           { id: 'thu_4', name: '시티드로우', sets: 3, targetReps: 12 },
           { id: 'thu_5', name: '바벨컬', sets: 3, targetReps: 12 },
@@ -203,6 +208,7 @@
     let workoutState = JSON.parse(localStorage.getItem('fitmaster_state') || '{}');
     let timerVolume = parseInt(localStorage.getItem('fitmaster_timer_vol') || '100');
     let soundPreset = localStorage.getItem('fitmaster_sound_preset') || 'airhorn';
+    let userBodyweight = parseFloat(localStorage.getItem('fitmaster_bodyweight') || '75');
 
     function initSoundSettings() {
       const slider = document.getElementById('timerVolume');
@@ -211,6 +217,8 @@
       if (slider) slider.value = timerVolume;
       if (label) label.innerText = `${timerVolume}%`;
       if (presetSelect) presetSelect.value = soundPreset;
+      const bwInput = document.getElementById('userBodyweight');
+      if (bwInput) bwInput.value = userBodyweight;
     }
 
     function updateVolume(val) {
@@ -222,6 +230,12 @@
     function changeSoundPreset(val) {
       soundPreset = val;
       localStorage.setItem('fitmaster_sound_preset', soundPreset);
+    }
+
+    function updateBodyweight(val) {
+      userBodyweight = parseFloat(val) || 0;
+      localStorage.setItem('fitmaster_bodyweight', userBodyweight);
+      calculateTotalVolume();
     }
 
     // --- 고출력 다이내믹스 컴프레서 + 멀티 오실레이터 알림 엔진 ---
@@ -238,7 +252,6 @@
         const ctx = new AudioCtx();
         const now = ctx.currentTime;
         
-        // 마스터 게인 및 음압을 꽉 채우는 다이내믹스 컴프레서 체인
         const masterGain = ctx.createGain();
         const compressor = ctx.createDynamicsCompressor();
         compressor.threshold.setValueAtTime(-20, now);
@@ -247,13 +260,11 @@
         compressor.attack.setValueAtTime(0.003, now);
         compressor.release.setValueAtTime(0.15, now);
 
-        // 출력 레벨 증폭
         masterGain.gain.setValueAtTime((timerVolume / 100) * 1.4, now);
         masterGain.connect(compressor);
         compressor.connect(ctx.destination);
 
         if (soundPreset === 'airhorn') {
-          // [스타디움 에어혼] 370Hz, 466Hz, 554Hz, 1108Hz 4개 배음 동시 발진 3연타
           const freqs = [370, 466, 554, 1108];
           const bursts = [0, 0.16, 0.34];
           bursts.forEach((t, bIdx) => {
@@ -276,7 +287,6 @@
           });
 
         } else if (soundPreset === 'buzzer') {
-          // [체육관 복싱 부저] 중역(700Hz) + 고역(3,200Hz) 사각파 더블 펀치 3연타
           const pulses = [0, 0.22, 0.44];
           pulses.forEach((t, i) => {
             const dur = (i === 2) ? 0.45 : 0.16;
@@ -298,7 +308,6 @@
           });
 
         } else {
-          // [고출력 전자 호각] 2,600Hz~4,600Hz 급격 스윕 + 5,200Hz~7,000Hz 초고음 하모닉스
           [0, 0.22].forEach(t => {
             const dur = 0.2;
             const osc = ctx.createOscillator();
@@ -384,16 +393,26 @@
       const routine = ROUTINES[currentDay];
       const content = document.getElementById('contentArea');
       const weekBox = document.getElementById('weekControlBox');
+      const bwBox = document.getElementById('bodyweightBox');
       content.innerHTML = '';
 
       if (routine.type === 'weight') {
         weekBox.style.display = 'block';
+        if (bwBox) bwBox.style.display = 'block';
         document.getElementById('weekIndicator').innerText = `루틴 ${currentWeekType} (${currentWeekType === 'A' ? '홀수주' : '짝수주'})`;
         renderWeightRoutine(routine, content);
       } else {
         weekBox.style.display = 'none';
+        if (bwBox) bwBox.style.display = 'none';
         renderCardioRoutine(routine, content);
       }
+    }
+
+    // 어시스트 여부 판별 함수
+    function checkIsAssist(ex) {
+      if (ex.isAssist) return true;
+      if (ex.biweekly && currentWeekType === 'B' && ex.isAssistB) return true;
+      return false;
     }
 
     function renderWeightRoutine(routine, container) {
@@ -406,12 +425,16 @@
         const effectiveExId = isBi ? `${ex.id}_${currentWeekType}` : ex.id;
         const memoKey = `memo_${effectiveExId}`;
         const savedMemo = localStorage.getItem(memoKey) || '';
+        const isAssist = checkIsAssist(ex);
 
         const card = document.createElement('div');
         card.className = 'exercise-card';
         card.innerHTML = `
           <div class="ex-header">
-            <div class="ex-name">${exName}</div>
+            <div class="ex-name">
+              ${exName}
+              ${isAssist ? '<span class="assist-badge">(보조 핀 무게 입력)</span>' : ''}
+            </div>
             <div class="ex-target">${ex.sets}세트 × ${ex.targetReps}회</div>
           </div>
           <input type="text" class="ex-memo" placeholder="머신 세팅/의자 높이 등 메모..." value="${savedMemo}" onchange="saveMemo('${memoKey}', this.value)">
@@ -423,12 +446,15 @@
           const stateKey = `${currentDay}_${effectiveExId}_${s}`;
           const lastRecord = JSON.parse(localStorage.getItem(`last_${effectiveExId}_${s}`) || 'null');
           const curr = workoutState[stateKey] || {};
+          const weightPlaceholder = isAssist 
+            ? (lastRecord ? `${lastRecord.w} kg (보조)` : '보조(kg)')
+            : (lastRecord ? `${lastRecord.w} kg` : '무게(kg)');
 
           const row = document.createElement('div');
           row.className = 'set-row';
           row.innerHTML = `
             <div class="set-num">${s}S</div>
-            <input type="number" class="input-box" placeholder="${lastRecord ? lastRecord.w + ' kg' : '무게(kg)'}" value="${curr.w !== undefined ? curr.w : ''}" id="w_${stateKey}" oninput="updateSetInput('${stateKey}')">
+            <input type="number" class="input-box" placeholder="${weightPlaceholder}" value="${curr.w !== undefined ? curr.w : ''}" id="w_${stateKey}" oninput="updateSetInput('${stateKey}')">
             <input type="number" class="input-box" placeholder="${lastRecord ? lastRecord.r + ' 회' : ex.targetReps + '회'}" value="${curr.r !== undefined ? curr.r : ''}" id="r_${stateKey}" oninput="updateSetInput('${stateKey}')">
             <button class="btn-complete ${curr.done ? 'done' : ''}" onclick="toggleSetDone('${stateKey}', '${effectiveExId}', ${s})">✓</button>
           `;
@@ -473,18 +499,24 @@
       renderApp();
     }
 
+    // 어시스트 종목(체중 - 보조핀무게) 반영 총 볼륨 계산
     function calculateTotalVolume() {
       let total = 0;
       const routine = ROUTINES[currentDay];
       if (routine && routine.type === 'weight') {
         routine.exercises.forEach(ex => {
           const effectiveExId = ex.biweekly ? `${ex.id}_${currentWeekType}` : ex.id;
+          const isAssist = checkIsAssist(ex);
+
           for (let s = 1; s <= ex.sets; s++) {
             const stateKey = `${currentDay}_${effectiveExId}_${s}`;
             if (workoutState[stateKey] && workoutState[stateKey].done) {
-              const w = parseFloat(workoutState[stateKey].w) || 0;
+              const inputW = parseFloat(workoutState[stateKey].w) || 0;
               const r = parseInt(workoutState[stateKey].r) || 0;
-              total += w * r;
+              
+              // 딥스 및 턱걸이는 (체중 - 보조무게)로 실제 부하 역산
+              const effectiveW = isAssist ? Math.max(0, userBodyweight - inputW) : inputW;
+              total += effectiveW * r;
             }
           }
         });
