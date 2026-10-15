@@ -23,20 +23,14 @@
     .header-top { display: flex; justify-content: space-between; align-items: center; }
     .title { font-size: 1.25rem; font-weight: bold; color: var(--accent-glow); }
     
-    /* 음악 및 알림 바 */
-    .music-bar { background: #242424; border-radius: 10px; margin-top: 10px; padding: 10px; }
-    .music-controls { display: flex; gap: 8px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
-    .btn-music { background: #333; color: #fff; border: 1px solid #444; padding: 6px 10px; border-radius: 6px; font-size: 0.8rem; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; }
-    .btn-music:active { background: var(--accent); }
-    
-    /* 볼륨 조절 컨트롤 */
-    .vol-row { display: flex; align-items: center; gap: 8px; margin-top: 10px; padding-top: 8px; border-top: 1px solid #333; font-size: 0.8rem; color: #ccc; }
+    /* 타이머 알림음 설정 툴바 */
+    .alert-settings { background: #222222; border-radius: 8px; padding: 10px; margin-top: 10px; border: 1px solid #333; }
+    .alert-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 0.8rem; color: #ccc; }
+    .alert-row:last-child { margin-bottom: 0; }
     .vol-slider { flex: 1; accent-color: var(--accent); cursor: pointer; }
-    
-    #ytPlayerContainer { margin-top: 10px; display: none; width: 100%; border-radius: 8px; overflow: hidden; }
-    #ytPlayerContainer iframe { width: 100%; height: 190px; border: none; }
-    .yt-input-group { display: flex; gap: 6px; margin-top: 8px; }
-    .yt-input-group input { flex: 1; background: #121212; border: 1px solid #444; color: #fff; padding: 6px 8px; border-radius: 6px; font-size: 0.8rem; }
+    .sound-select { background: #2a2a2a; color: #fff; border: 1px solid #444; border-radius: 4px; padding: 4px 6px; font-size: 0.8rem; }
+    .btn-action { background: #333; color: #fff; border: 1px solid #444; padding: 5px 10px; border-radius: 6px; font-size: 0.8rem; cursor: pointer; }
+    .btn-action:active { background: var(--accent); }
     
     /* 요일 탭 */
     .day-tabs { display: flex; overflow-x: auto; gap: 6px; padding: 12px 16px; background: #161616; border-bottom: 1px solid var(--border); }
@@ -96,34 +90,21 @@
       </div>
     </div>
 
-    <!-- 음악 / 알림 사운드 제어 -->
-    <div class="music-bar">
-      <div class="music-controls">
-        <span style="font-size:0.8rem; color:#aaa;">🎵 외부 플레이어:</span>
-        <button class="btn-music" onclick="toggleYtPlayer()">▶ 유튜브 플레이어</button>
-        <a class="btn-music" href="https://music.youtube.com" target="_blank">YT Music</a>
-        <a class="btn-music" href="https://open.spotify.com" target="_blank">Spotify</a>
+    <!-- 타이머 알림음 설정 바 -->
+    <div class="alert-settings">
+      <div class="alert-row">
+        <span style="width: 75px;">🔔 소리 종류:</span>
+        <select class="sound-select" id="soundPreset" onchange="changeSoundPreset(this.value)">
+          <option value="buzzer">체육관 부저 (비트 관통)</option>
+          <option value="whistle">전자 호각 (고주파 휘슬)</option>
+          <option value="siren">경고 사이렌 (고주파 교차)</option>
+        </select>
+        <button class="btn-action" style="margin-left:auto;" onclick="testTimerSound()">소리 테스트</button>
       </div>
-
-      <!-- 타이머 알림음 전용 볼륨 슬라이더 -->
-      <div class="vol-row">
-        <span>🔔 타이머 볼륨:</span>
-        <input type="range" class="vol-slider" id="timerVolume" min="0" max="100" value="80" oninput="updateVolume(this.value)">
-        <span id="volLabel" style="width: 36px; text-align: right;">80%</span>
-        <button class="btn-music" onclick="testTimerSound()">소리 테스트</button>
-      </div>
-
-      <div id="ytPlayerContainer">
-        <iframe id="ytIframe" src="" allow="autoplay; encrypted-media"></iframe>
-        <div class="yt-input-group">
-          <input type="text" id="ytUrlInput" placeholder="유튜브 영상 또는 재생목록 링크 입력">
-          <button class="btn-music" onclick="loadCustomYt()">재생</button>
-        </div>
-        <div style="display:flex; gap:6px; margin-top:6px;">
-          <button class="btn-music" style="flex:1;" onclick="loadPresetYt('PLFgquLnL59alW3xmYiWRaoz0oM3H17Lth')">🔥 헬스 EDM</button>
-          <button class="btn-music" style="flex:1;" onclick="loadPresetYt('PLDIoUOhQQPlXr63I_vwF9GD8sAKh77dWU')">⚡ 파워 힙합</button>
-          <button class="btn-music" style="flex:1;" onclick="loadPresetYt('PLOzDu-MXXL3g1X7WvE4sL9mP7B5UuIeQ5')">🎧 집중 로파이</button>
-        </div>
+      <div class="alert-row">
+        <span style="width: 75px;">🔊 알림 음량:</span>
+        <input type="range" class="vol-slider" id="timerVolume" min="0" max="100" value="95" oninput="updateVolume(this.value)">
+        <span id="volLabel" style="width: 38px; text-align: right;">95%</span>
       </div>
     </div>
   </header>
@@ -220,14 +201,16 @@
     let currentWeekType = getWeekType();
     let currentDay = new Date().getDay();
     let workoutState = JSON.parse(localStorage.getItem('fitmaster_state') || '{}');
-    let timerVolume = parseInt(localStorage.getItem('fitmaster_timer_vol') || '80');
+    let timerVolume = parseInt(localStorage.getItem('fitmaster_timer_vol') || '95');
+    let soundPreset = localStorage.getItem('fitmaster_sound_preset') || 'buzzer';
 
-    // 볼륨 설정 제어
-    function initVolume() {
+    function initSoundSettings() {
       const slider = document.getElementById('timerVolume');
       const label = document.getElementById('volLabel');
+      const presetSelect = document.getElementById('soundPreset');
       if (slider) slider.value = timerVolume;
       if (label) label.innerText = `${timerVolume}%`;
+      if (presetSelect) presetSelect.value = soundPreset;
     }
 
     function updateVolume(val) {
@@ -236,44 +219,79 @@
       document.getElementById('volLabel').innerText = `${timerVolume}%`;
     }
 
-    // --- 음악을 뚫고 들리는 선명한 3단 차임벨 엔진 ---
+    function changeSoundPreset(val) {
+      soundPreset = val;
+      localStorage.setItem('fitmaster_sound_preset', soundPreset);
+    }
+
     function triggerNonIntrusiveAlert() {
-      // 1) 강한 진동 알림
       if (navigator.vibrate) {
-        navigator.vibrate([250, 100, 250, 100, 400]);
+        navigator.vibrate([300, 100, 300, 100, 600]);
       }
       
-      // 2) 음악에 묻히지 않는 트라이앵글 3단 비프음 (볼륨 슬라이더 값 연동)
       if (timerVolume === 0) return;
+
       try {
         const AudioCtx = window.AudioContext || window.webkitAudioContext;
         if (!AudioCtx) return;
         const ctx = new AudioCtx();
         const now = ctx.currentTime;
-        const gainScale = (timerVolume / 100) * 0.8; // 최대 0.8 게인으로 선명하게 증폭
+        const gainScale = (timerVolume / 100) * 0.95;
 
-        // 880Hz (라) -> 880Hz (라) -> 1760Hz (높은 라) 3단 사운드
-        const notes = [
-          { freq: 880, start: 0, dur: 0.12 },
-          { freq: 880, start: 0.18, dur: 0.12 },
-          { freq: 1760, start: 0.36, dur: 0.35 }
-        ];
+        if (soundPreset === 'buzzer') {
+          const pulses = [0, 0.22, 0.44];
+          pulses.forEach((t, i) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(i === 2 ? 3400 : 2800, now + t);
 
-        notes.forEach(note => {
+            gain.gain.setValueAtTime(0.001, now + t);
+            gain.gain.exponentialRampToValueAtTime(gainScale, now + t + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + t + (i === 2 ? 0.35 : 0.15));
+
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(now + t);
+            osc.stop(now + t + (i === 2 ? 0.35 : 0.15));
+          });
+
+        } else if (soundPreset === 'whistle') {
+          [0, 0.25].forEach((t) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(2400, now + t);
+            osc.frequency.exponentialRampToValueAtTime(4200, now + t + 0.18);
+
+            gain.gain.setValueAtTime(0.001, now + t);
+            gain.gain.exponentialRampToValueAtTime(gainScale, now + t + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + t + 0.2);
+
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(now + t);
+            osc.stop(now + t + 0.2);
+          });
+
+        } else {
           const osc = ctx.createOscillator();
           const gain = ctx.createGain();
-          osc.type = 'triangle'; // 배음이 풍부해 배경 음악 속에서도 명확히 식별됨
-          osc.frequency.setValueAtTime(note.freq, now + note.start);
+          osc.type = 'triangle';
+          
+          for (let i = 0; i < 6; i++) {
+            osc.frequency.setValueAtTime(i % 2 === 0 ? 3000 : 3800, now + (i * 0.1));
+          }
 
-          gain.gain.setValueAtTime(0.001, now + note.start);
-          gain.gain.exponentialRampToValueAtTime(Math.max(0.001, gainScale), now + note.start + 0.02);
-          gain.gain.exponentialRampToValueAtTime(0.001, now + note.start + note.dur);
+          gain.gain.setValueAtTime(0.001, now);
+          gain.gain.exponentialRampToValueAtTime(gainScale, now + 0.03);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.65);
 
           osc.connect(gain);
           gain.connect(ctx.destination);
-          osc.start(now + note.start);
-          osc.stop(now + note.start + note.dur);
-        });
+          osc.start(now);
+          osc.stop(now + 0.65);
+        }
       } catch (e) {
         console.log("Audio play error:", e);
       }
@@ -552,37 +570,6 @@
       renderApp();
     }
 
-    // --- 유튜브 플레이어 ---
-    function toggleYtPlayer() {
-      const container = document.getElementById('ytPlayerContainer');
-      container.style.display = container.style.display === 'block' ? 'none' : 'block';
-      if (container.style.display === 'block' && !document.getElementById('ytIframe').src) {
-        loadPresetYt('PLDIoUOhQQPlXr63I_vwF9GD8sAKh77dWU');
-      }
-    }
-
-    function loadPresetYt(playlistId) {
-      document.getElementById('ytPlayerContainer').style.display = 'block';
-      document.getElementById('ytIframe').src = `https://www.youtube.com/embed/videoseries?list=${playlistId}&autoplay=1`;
-    }
-
-    function loadCustomYt() {
-      const val = document.getElementById('ytUrlInput').value.trim();
-      if (!val) return;
-      let vidId = '';
-      if (val.includes('v=')) vidId = val.split('v=')[1].split('&')[0];
-      else if (val.includes('youtu.be/')) vidId = val.split('youtu.be/')[1].split('?')[0];
-      else if (val.includes('list=')) {
-        const listId = val.split('list=')[1].split('&')[0];
-        loadPresetYt(listId);
-        return;
-      } else vidId = val;
-
-      if (vidId) {
-        document.getElementById('ytIframe').src = `https://www.youtube.com/embed/${vidId}?autoplay=1`;
-      }
-    }
-
     // --- 데이터 백업 및 복원 ---
     document.getElementById('btnExport').onclick = () => {
       const data = JSON.stringify(localStorage);
@@ -623,8 +610,7 @@
       navigator.serviceWorker.register('./sw.js').catch(err => console.log(err));
     }
 
-    // 실행 초기화
-    initVolume();
+    initSoundSettings();
     renderApp();
   </script>
 </body>
