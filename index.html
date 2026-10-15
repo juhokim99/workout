@@ -70,7 +70,7 @@
     .btn-start { background: var(--success); color: #000; }
     .btn-stop { background: #d32f2f; color: #fff; }
 
-    /* 휴식 타이머 플로팅 바 */
+    /* 휴식 타이머 플로팅 바 (기본 1분) */
     .timer-overlay { position: fixed; bottom: 0; left: 0; right: 0; background: #182834; border-top: 2px solid var(--accent); padding: 12px 16px; display: none; justify-content: space-between; align-items: center; z-index: 200; box-shadow: 0 -4px 12px rgba(0,0,0,0.5); }
     .timer-overlay.active { display: flex; }
     .timer-text { font-size: 1.4rem; font-weight: bold; color: #64b5f6; }
@@ -109,7 +109,7 @@
     </div>
   </header>
 
-  <!-- 요일 선택 탭 (일요일 제외: 월~토) -->
+  <!-- 요일 선택 탭 (월~토) -->
   <div class="day-tabs" id="dayTabs">
     <button class="day-tab" data-day="1">월 (유산소)</button>
     <button class="day-tab" data-day="2">화 (가슴/삼두)</button>
@@ -134,11 +134,11 @@
   <!-- 운동 콘텐츠 영역 -->
   <div class="container" id="contentArea"></div>
 
-  <!-- 플로팅 휴식 타이머 바 -->
+  <!-- 플로팅 휴식 타이머 바 (기본 1분) -->
   <div class="timer-overlay" id="timerOverlay">
     <div>
       <div style="font-size: 0.75rem; color:#90caf9;">휴식 타이머 (음악 방해 없음)</div>
-      <div class="timer-text" id="timerDisplay">01:30</div>
+      <div class="timer-text" id="timerDisplay">01:00</div>
     </div>
     <div class="timer-btns">
       <button class="btn-timer-action" onclick="adjustTimer(30)">+30초</button>
@@ -198,7 +198,6 @@
 
     let currentWeekType = getWeekType();
     let currentDay = new Date().getDay();
-    // 일요일(0) 접속 시 기본 선택을 월요일(1)로 자동 보정
     if (currentDay === 0) currentDay = 1;
 
     let workoutState = JSON.parse(localStorage.getItem('fitmaster_state') || '{}');
@@ -302,11 +301,11 @@
       triggerNonIntrusiveAlert();
     }
 
-    // --- 휴식 타이머 로직 ---
+    // --- 휴식 타이머 로직 (기본 60초) ---
     let timerInterval = null;
-    let timerRemaining = 90;
+    let timerRemaining = 60;
 
-    function startRestTimer(seconds = 90) {
+    function startRestTimer(seconds = 60) {
       clearInterval(timerInterval);
       timerRemaining = seconds;
       const overlay = document.getElementById('timerOverlay');
@@ -417,7 +416,8 @@
 
       if (isDone) {
         localStorage.setItem(`last_${exId}_${setIndex}`, JSON.stringify({ w: weight, r: reps }));
-        startRestTimer(90);
+        // 완료 즉시 기본 60초 휴식 타이머 시작
+        startRestTimer(60);
       }
       renderApp();
     }
