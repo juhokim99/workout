@@ -23,11 +23,16 @@
     .header-top { display: flex; justify-content: space-between; align-items: center; }
     .title { font-size: 1.25rem; font-weight: bold; color: var(--accent-glow); }
     
-    /* 음악 및 유튜브 바 */
+    /* 음악 및 알림 바 */
     .music-bar { background: #242424; border-radius: 10px; margin-top: 10px; padding: 10px; }
-    .music-controls { display: flex; gap: 8px; align-items: center; justify-content: space-between; }
+    .music-controls { display: flex; gap: 8px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
     .btn-music { background: #333; color: #fff; border: 1px solid #444; padding: 6px 10px; border-radius: 6px; font-size: 0.8rem; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; }
     .btn-music:active { background: var(--accent); }
+    
+    /* 볼륨 조절 컨트롤 */
+    .vol-row { display: flex; align-items: center; gap: 8px; margin-top: 10px; padding-top: 8px; border-top: 1px solid #333; font-size: 0.8rem; color: #ccc; }
+    .vol-slider { flex: 1; accent-color: var(--accent); cursor: pointer; }
+    
     #ytPlayerContainer { margin-top: 10px; display: none; width: 100%; border-radius: 8px; overflow: hidden; }
     #ytPlayerContainer iframe { width: 100%; height: 190px; border: none; }
     .yt-input-group { display: flex; gap: 6px; margin-top: 8px; }
@@ -81,7 +86,6 @@
 </head>
 <body>
 
-  <!-- 헤더 & 음악/유튜브 컨트롤 바 -->
   <header>
     <div class="header-top">
       <div class="title">⚡ FitMaster Pro</div>
@@ -92,14 +96,23 @@
       </div>
     </div>
 
-    <!-- 음악 / 유튜브 미니 독 -->
+    <!-- 음악 / 알림 사운드 제어 -->
     <div class="music-bar">
       <div class="music-controls">
-        <span style="font-size:0.8rem; color:#aaa;">🎵 BGM / 플레이어:</span>
+        <span style="font-size:0.8rem; color:#aaa;">🎵 외부 플레이어:</span>
         <button class="btn-music" onclick="toggleYtPlayer()">▶ 유튜브 플레이어</button>
         <a class="btn-music" href="https://music.youtube.com" target="_blank">YT Music</a>
         <a class="btn-music" href="https://open.spotify.com" target="_blank">Spotify</a>
       </div>
+
+      <!-- 타이머 알림음 전용 볼륨 슬라이더 -->
+      <div class="vol-row">
+        <span>🔔 타이머 볼륨:</span>
+        <input type="range" class="vol-slider" id="timerVolume" min="0" max="100" value="80" oninput="updateVolume(this.value)">
+        <span id="volLabel" style="width: 36px; text-align: right;">80%</span>
+        <button class="btn-music" onclick="testTimerSound()">소리 테스트</button>
+      </div>
+
       <div id="ytPlayerContainer">
         <iframe id="ytIframe" src="" allow="autoplay; encrypted-media"></iframe>
         <div class="yt-input-group">
@@ -138,10 +151,10 @@
     </div>
   </div>
 
-  <!-- 운동 루틴 콘텐츠 영역 -->
+  <!-- 운동 콘텐츠 영역 -->
   <div class="container" id="contentArea"></div>
 
-  <!-- 플로팅 휴식 타이머 (음악 끊김 없는 Web Audio & 진동 알림) -->
+  <!-- 플로팅 휴식 타이머 바 -->
   <div class="timer-overlay" id="timerOverlay">
     <div>
       <div style="font-size: 0.75rem; color:#90caf9;">휴식 타이머 (음악 방해 없음)</div>
@@ -154,9 +167,7 @@
   </div>
 
   <script>
-    // --- 1. 루틴 데이터베이스 정의 ---
     const ROUTINES = {
-      // 화: 가슴/삼두
       2: {
         type: 'weight',
         title: '화요일: 가슴 / 삼두',
@@ -168,7 +179,6 @@
           { id: 'tue_5', name: '케이블 푸쉬 다운', sets: 3, targetReps: 12 }
         ]
       },
-      // 목: 등/이두
       4: {
         type: 'weight',
         title: '목요일: 등 / 이두',
@@ -181,7 +191,6 @@
           { id: 'thu_6', name: '케이블 헤머컬', sets: 3, targetReps: 12 }
         ]
       },
-      // 토: 하체/어깨
       6: {
         type: 'weight',
         title: '토요일: 하체 / 어깨',
@@ -193,14 +202,12 @@
           { id: 'sat_5', name: '사이드 레터럴 레이즈', sets: 3, targetReps: 15 }
         ]
       },
-      // 월, 수, 금: 유산소
       1: { type: 'cardio', title: '월요일: 유산소 러닝' },
       3: { type: 'cardio', title: '수요일: 유산소 러닝' },
       5: { type: 'cardio', title: '금요일: 유산소 러닝' },
       0: { type: 'cardio', title: '일요일: 자유 유산소 / 회복' }
     };
 
-    // 주차 계산 (홀수/짝수 주차 결정)
     function getWeekType() {
       const saved = localStorage.getItem('fitmaster_week_type');
       if (saved) return saved;
@@ -211,37 +218,72 @@
     }
 
     let currentWeekType = getWeekType();
-    let currentDay = new Date().getDay(); // 0(일) ~ 6(토)
+    let currentDay = new Date().getDay();
     let workoutState = JSON.parse(localStorage.getItem('fitmaster_state') || '{}');
+    let timerVolume = parseInt(localStorage.getItem('fitmaster_timer_vol') || '80');
 
-    // --- 2. 오디오 포커스를 해치지 않는 비간섭 알림 엔진 ---
+    // 볼륨 설정 제어
+    function initVolume() {
+      const slider = document.getElementById('timerVolume');
+      const label = document.getElementById('volLabel');
+      if (slider) slider.value = timerVolume;
+      if (label) label.innerText = `${timerVolume}%`;
+    }
+
+    function updateVolume(val) {
+      timerVolume = parseInt(val);
+      localStorage.setItem('fitmaster_timer_vol', timerVolume);
+      document.getElementById('volLabel').innerText = `${timerVolume}%`;
+    }
+
+    // --- 음악을 뚫고 들리는 선명한 3단 차임벨 엔진 ---
     function triggerNonIntrusiveAlert() {
-      // 1) 진동
+      // 1) 강한 진동 알림
       if (navigator.vibrate) {
-        navigator.vibrate([200, 100, 200, 100, 400]);
+        navigator.vibrate([250, 100, 250, 100, 400]);
       }
-      // 2) Web Audio API (외부 음악을 멈추지 않는 단발성 신디사이저 사운드)
+      
+      // 2) 음악에 묻히지 않는 트라이앵글 3단 비프음 (볼륨 슬라이더 값 연동)
+      if (timerVolume === 0) return;
       try {
         const AudioCtx = window.AudioContext || window.webkitAudioContext;
-        if (AudioCtx) {
-          const ctx = new AudioCtx();
+        if (!AudioCtx) return;
+        const ctx = new AudioCtx();
+        const now = ctx.currentTime;
+        const gainScale = (timerVolume / 100) * 0.8; // 최대 0.8 게인으로 선명하게 증폭
+
+        // 880Hz (라) -> 880Hz (라) -> 1760Hz (높은 라) 3단 사운드
+        const notes = [
+          { freq: 880, start: 0, dur: 0.12 },
+          { freq: 880, start: 0.18, dur: 0.12 },
+          { freq: 1760, start: 0.36, dur: 0.35 }
+        ];
+
+        notes.forEach(note => {
           const osc = ctx.createOscillator();
           const gain = ctx.createGain();
-          osc.type = 'sine';
-          osc.frequency.setValueAtTime(880, ctx.currentTime);
-          gain.gain.setValueAtTime(0.15, ctx.currentTime);
-          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+          osc.type = 'triangle'; // 배음이 풍부해 배경 음악 속에서도 명확히 식별됨
+          osc.frequency.setValueAtTime(note.freq, now + note.start);
+
+          gain.gain.setValueAtTime(0.001, now + note.start);
+          gain.gain.exponentialRampToValueAtTime(Math.max(0.001, gainScale), now + note.start + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + note.start + note.dur);
+
           osc.connect(gain);
           gain.connect(ctx.destination);
-          osc.start();
-          osc.stop(ctx.currentTime + 0.5);
-        }
+          osc.start(now + note.start);
+          osc.stop(now + note.start + note.dur);
+        });
       } catch (e) {
-        console.log("Audio non-intrusive sound bypassed");
+        console.log("Audio play error:", e);
       }
     }
 
-    // --- 3. 휴식 타이머 로직 ---
+    function testTimerSound() {
+      triggerNonIntrusiveAlert();
+    }
+
+    // --- 휴식 타이머 로직 ---
     let timerInterval = null;
     let timerRemaining = 90;
 
@@ -280,12 +322,10 @@
       document.getElementById('timerOverlay').classList.remove('active');
     }
 
-    // --- 4. 화면 렌더링 엔진 ---
+    // --- 화면 렌더링 ---
     function renderApp() {
-      // 주차 라벨 갱신
       document.getElementById('weekIndicator').innerText = `루틴 ${currentWeekType} (${currentWeekType === 'A' ? '홀수주' : '짝수주'})`;
 
-      // 탭 활성화
       document.querySelectorAll('.day-tab').forEach(tab => {
         tab.classList.toggle('active', parseInt(tab.dataset.day) === currentDay);
       });
@@ -301,7 +341,6 @@
       }
     }
 
-    // 무산소 운동 렌더링
     function renderWeightRoutine(routine, container) {
       document.getElementById('summaryTitle').innerText = '오늘의 총 볼륨';
       calculateTotalVolume();
@@ -358,7 +397,6 @@
       localStorage.setItem('fitmaster_state', JSON.stringify(workoutState));
 
       if (isDone) {
-        // 고스트 인풋용 마지막 기록 저장
         localStorage.setItem(`last_${exId}_${setIndex}`, JSON.stringify({ w: weight, r: reps }));
         startRestTimer(90);
       }
@@ -381,7 +419,7 @@
       renderApp();
     }
 
-    // --- 5. 유산소 러닝 & 실시간 GPS & 고스트 러너 ---
+    // --- 유산소 기능 ---
     let watchId = null;
     let runStartTime = null;
     let runDistanceKm = 0;
@@ -412,7 +450,7 @@
 
         <div class="ghost-runner" id="ghostBox">
           ${lastRun 
-            ? `🏁 지난 기록(${lastRun.date}): <b>${lastRun.dist}km</b> / <b>${lastRun.time}</b><br><span id="paceCompare">지난 페이스와 실시간 비교 중...</span>`
+            ? `🏁 지난 기록(${lastRun.date}): <b>${lastRun.dist}km</b> / <b>${lastRun.time}</b>`
             : '🏁 지난 운동 기록이 없습니다. 오늘 첫 기록을 세워보세요!'}
         </div>
 
@@ -462,16 +500,15 @@
       watchId = navigator.geolocation.watchPosition(
         (pos) => {
           const { latitude, longitude, accuracy } = pos.coords;
-          if (accuracy > 30) return; // 오차 큰 GPS 필터링
+          if (accuracy > 30) return;
 
           if (lastCoords) {
             const d = haversineDistance(lastCoords.lat, lastCoords.lon, latitude, longitude);
-            if (d > 0.003) { // 3m 이상 이동 시 누적
+            if (d > 0.003) {
               runDistanceKm += d;
               const distEl = document.getElementById('runDist');
               if (distEl) distEl.innerText = runDistanceKm.toFixed(2);
 
-              // 1km 마다 음성 안내
               if (Math.floor(runDistanceKm) > lastSpokenKm) {
                 lastSpokenKm = Math.floor(runDistanceKm);
                 checkTtsAnnouncement(lastSpokenKm);
@@ -515,12 +552,12 @@
       renderApp();
     }
 
-    // --- 6. 유튜브 플레이어 제어 로직 ---
+    // --- 유튜브 플레이어 ---
     function toggleYtPlayer() {
       const container = document.getElementById('ytPlayerContainer');
       container.style.display = container.style.display === 'block' ? 'none' : 'block';
       if (container.style.display === 'block' && !document.getElementById('ytIframe').src) {
-        loadPresetYt('PLDIoUOhQQPlXr63I_vwF9GD8sAKh77dWU'); // 기본 힙합
+        loadPresetYt('PLDIoUOhQQPlXr63I_vwF9GD8sAKh77dWU');
       }
     }
 
@@ -546,7 +583,7 @@
       }
     }
 
-    // --- 7. 데이터 백업 / 복원 기능 ---
+    // --- 데이터 백업 및 복원 ---
     document.getElementById('btnExport').onclick = () => {
       const data = JSON.stringify(localStorage);
       const blob = new Blob([data], { type: 'application/json' });
@@ -575,7 +612,6 @@
       reader.readAsText(file);
     };
 
-    // 요일 탭 클릭 이벤트
     document.getElementById('dayTabs').addEventListener('click', (e) => {
       if (e.target.classList.contains('day-tab')) {
         currentDay = parseInt(e.target.dataset.day);
@@ -583,12 +619,12 @@
       }
     });
 
-    // PWA 서비스 워커 등록
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('./sw.js').catch(err => console.log(err));
     }
 
-    // 초기 실행
+    // 실행 초기화
+    initVolume();
     renderApp();
   </script>
 </body>
