@@ -348,10 +348,13 @@
     // --- 휴식 타이머 로직 (기본 60초) ---
     let timerInterval = null;
     let timerRemaining = 60;
+    let targetEndTime = 0;
 
     function startRestTimer(seconds = 60) {
       clearInterval(timerInterval);
       timerRemaining = seconds;
+      targetEndTime = Date.now() + (seconds * 1000); // 목표 절대 시각 고정
+
       const overlay = document.getElementById('timerOverlay');
       const display = document.getElementById('timerDisplay');
       overlay.classList.add('active');
@@ -364,25 +367,47 @@
       updateDisplay();
 
       timerInterval = setInterval(() => {
-        timerRemaining--;
-        if (timerRemaining <= 0) {
+        const diff = Math.ceil((targetEndTime - Date.now()) / 1000);
+        if (diff <= 0) {
           clearInterval(timerInterval);
           overlay.classList.remove('active');
           triggerNonIntrusiveAlert();
         } else {
+          timerRemaining = diff;
           updateDisplay();
         }
-      }, 1000);
+      }, 500);
     }
 
     function adjustTimer(sec) {
-      timerRemaining += sec;
+      targetEndTime += (sec * 1000);
+      timerRemaining = Math.max(0, Math.ceil((targetEndTime - Date.now()) / 1000));
+      const m = String(Math.floor(timerRemaining / 60)).padStart(2, '0');
+      const s = String(timerRemaining % 60).padStart(2, '0');
+      document.getElementById('timerDisplay').innerText = `${m}:${s}`;
     }
 
     function stopTimer() {
       clearInterval(timerInterval);
       document.getElementById('timerOverlay').classList.remove('active');
     }
+
+    // 화면이 꺼졌다가 다시 켜졌을 때 즉시 오차를 보정하는 이벤트
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && document.getElementById('timerOverlay').classList.contains('active')) {
+        const diff = Math.ceil((targetEndTime - Date.now()) / 1000);
+        if (diff <= 0) {
+          clearInterval(timerInterval);
+          document.getElementById('timerOverlay').classList.remove('active');
+          triggerNonIntrusiveAlert();
+        } else {
+          timerRemaining = diff;
+          const m = String(Math.floor(timerRemaining / 60)).padStart(2, '0');
+          const s = String(timerRemaining % 60).padStart(2, '0');
+          document.getElementById('timerDisplay').innerText = `${m}:${s}`;
+        }
+      }
+    });
 
     // --- 화면 렌더링 엔진 ---
     function renderApp() {
