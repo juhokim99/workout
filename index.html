@@ -51,6 +51,7 @@
     .ex-name { font-size: 1.05rem; font-weight: bold; }
     .ex-target { font-size: 0.8rem; color: var(--accent-glow); }
     .assist-badge { font-size: 0.72rem; color: #ffb74d; margin-left: 4px; }
+    .dumbbell-badge { font-size: 0.72rem; color: #4fc3f7; margin-left: 4px; }
     .ex-memo { width: 100%; background: #151515; border: 1px solid #333; color: #bbb; padding: 6px 8px; border-radius: 6px; font-size: 0.75rem; margin-bottom: 10px; }
 
     .set-row { display: grid; grid-template-columns: 36px 1fr 1fr 48px; gap: 6px; align-items: center; margin-bottom: 8px; }
@@ -72,7 +73,7 @@
     .btn-start { background: var(--success); color: #000; }
     .btn-stop { background: #d32f2f; color: #fff; }
 
-    /* 휴식 타이머 플로팅 바 (기본 1분) */
+    /* 휴식 타이머 플로팅 바 */
     .timer-overlay { position: fixed; bottom: 0; left: 0; right: 0; background: #182834; border-top: 2px solid var(--accent); padding: 12px 16px; display: none; justify-content: space-between; align-items: center; z-index: 200; box-shadow: 0 -4px 12px rgba(0,0,0,0.5); }
     .timer-overlay.active { display: flex; }
     .timer-text { font-size: 1.4rem; font-weight: bold; color: #64b5f6; }
@@ -131,7 +132,7 @@
       </div>
     </div>
     <div style="text-align: right;" id="weekControlBox">
-      <div style="font-size:0.75rem; color:#888; margin-bottom:4px;" id="weekIndicator">루틴 A (홀수주)</div>
+      <div style="font-size:0.75rem; color:#888; margin-bottom:4px;" id="weekIndicator">루틴 A (수동 고정)</div>
       <button class="week-toggle" onclick="toggleWeekType()">격주 A/B 전환</button>
     </div>
   </div>
@@ -139,7 +140,7 @@
   <!-- 운동 콘텐츠 영역 -->
   <div class="container" id="contentArea"></div>
 
-  <!-- 플로팅 휴식 타이머 바 (기본 1분) -->
+  <!-- 플로팅 휴식 타이머 바 -->
   <div class="timer-overlay" id="timerOverlay">
     <div>
       <div style="font-size: 0.75rem; color:#90caf9;">휴식 타이머 (음악 방해 없음)</div>
@@ -158,7 +159,7 @@
         title: '화요일: 가슴 / 삼두',
         exercises: [
           { id: 'tue_1', nameA: '인클라인 벤치 프레스', nameB: '벤치 프레스', sets: 4, targetReps: 10, biweekly: true },
-          { id: 'tue_2', name: '인클라인 덤벨 프레스', sets: 4, targetReps: 12 },
+          { id: 'tue_2', name: '인클라인 덤벨 프레스', sets: 4, targetReps: 12, isDumbbell: true },
           { id: 'tue_3', name: '딥스', sets: 3, targetReps: 15, isAssist: true },
           { id: 'tue_4', name: '케이블 오버 익스텐션', sets: 3, targetReps: 12 },
           { id: 'tue_5', name: '케이블 푸쉬 다운', sets: 3, targetReps: 12 }
@@ -183,8 +184,8 @@
           { id: 'sat_1', name: '레그 익스텐션', sets: 3, targetReps: 15 },
           { id: 'sat_2', nameA: '레그프레스', nameB: '스쿼트', sets: 4, targetReps: 10, biweekly: true },
           { id: 'sat_3', name: '익스터널 로테이션', sets: 3, targetReps: 15 },
-          { id: 'sat_4', nameA: '머신숄더프레스', nameB: '덤벨숄더프레스', sets: 3, targetReps: 12, biweekly: true },
-          { id: 'sat_5', name: '사이드 레터럴 레이즈', sets: 3, targetReps: 15 }
+          { id: 'sat_4', nameA: '머신숄더프레스', nameB: '덤벨숄더프레스', sets: 3, targetReps: 12, biweekly: true, isDumbbellB: true },
+          { id: 'sat_5', name: '사이드 레터럴 레이즈', sets: 3, targetReps: 15, isDumbbell: true }
         ]
       },
       1: { type: 'cardio', title: '월요일: 유산소 러닝' },
@@ -192,13 +193,9 @@
       5: { type: 'cardio', title: '금요일: 유산소 러닝' }
     };
 
+    // 자동 주차 계산 완전 제거 -> 사용자가 선택한 루틴을 영구 유지 (기본값: 'A')
     function getWeekType() {
-      const saved = localStorage.getItem('fitmaster_week_type');
-      if (saved) return saved;
-      const d = new Date();
-      const onejan = new Date(d.getFullYear(), 0, 1);
-      const week = Math.ceil((((d - onejan) / 86400000) + onejan.getDay() + 1) / 7);
-      return (week % 2 === 1) ? 'A' : 'B';
+      return localStorage.getItem('fitmaster_week_type') || 'A';
     }
 
     let currentWeekType = getWeekType();
@@ -238,12 +235,11 @@
       calculateTotalVolume();
     }
 
-    // --- 고출력 다이내믹스 컴프레서 + 멀티 오실레이터 알림 엔진 ---
+    // --- 고출력 다이내믹스 컴프레서 알림음 엔진 ---
     function triggerNonIntrusiveAlert() {
       if (navigator.vibrate) {
         navigator.vibrate([300, 100, 300, 100, 700]);
       }
-      
       if (timerVolume === 0) return;
 
       try {
@@ -285,7 +281,6 @@
               osc.stop(now + t + dur);
             });
           });
-
         } else if (soundPreset === 'buzzer') {
           const pulses = [0, 0.22, 0.44];
           pulses.forEach((t, i) => {
@@ -306,7 +301,6 @@
               osc.stop(now + t + dur);
             });
           });
-
         } else {
           [0, 0.22].forEach(t => {
             const dur = 0.2;
@@ -345,7 +339,7 @@
       triggerNonIntrusiveAlert();
     }
 
-    // --- 휴식 타이머 로직 (기본 60초) ---
+    // --- 휴식 타이머 로직 (절대 시각 Date.now 기반 백그라운드 보정) ---
     let timerInterval = null;
     let timerRemaining = 60;
     let targetEndTime = 0;
@@ -353,7 +347,7 @@
     function startRestTimer(seconds = 60) {
       clearInterval(timerInterval);
       timerRemaining = seconds;
-      targetEndTime = Date.now() + (seconds * 1000); // 목표 절대 시각 고정
+      targetEndTime = Date.now() + (seconds * 1000);
 
       const overlay = document.getElementById('timerOverlay');
       const display = document.getElementById('timerDisplay');
@@ -392,7 +386,6 @@
       document.getElementById('timerOverlay').classList.remove('active');
     }
 
-    // 화면이 꺼졌다가 다시 켜졌을 때 즉시 오차를 보정하는 이벤트
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden && document.getElementById('timerOverlay').classList.contains('active')) {
         const diff = Math.ceil((targetEndTime - Date.now()) / 1000);
@@ -424,7 +417,7 @@
       if (routine.type === 'weight') {
         weekBox.style.display = 'block';
         if (bwBox) bwBox.style.display = 'block';
-        document.getElementById('weekIndicator').innerText = `루틴 ${currentWeekType} (${currentWeekType === 'A' ? '홀수주' : '짝수주'})`;
+        document.getElementById('weekIndicator').innerText = `루틴 ${currentWeekType} (수동 고정)`;
         renderWeightRoutine(routine, content);
       } else {
         weekBox.style.display = 'none';
@@ -433,10 +426,17 @@
       }
     }
 
-    // 어시스트 여부 판별 함수
+    // 어시스트 판별
     function checkIsAssist(ex) {
       if (ex.isAssist) return true;
       if (ex.biweekly && currentWeekType === 'B' && ex.isAssistB) return true;
+      return false;
+    }
+
+    // 덤벨 판별
+    function checkIsDumbbell(ex) {
+      if (ex.isDumbbell) return true;
+      if (ex.biweekly && currentWeekType === 'B' && ex.isDumbbellB) return true;
       return false;
     }
 
@@ -451,6 +451,7 @@
         const memoKey = `memo_${effectiveExId}`;
         const savedMemo = localStorage.getItem(memoKey) || '';
         const isAssist = checkIsAssist(ex);
+        const isDumbbell = checkIsDumbbell(ex);
 
         const card = document.createElement('div');
         card.className = 'exercise-card';
@@ -459,6 +460,7 @@
             <div class="ex-name">
               ${exName}
               ${isAssist ? '<span class="assist-badge">(보조 핀 무게 입력)</span>' : ''}
+              ${isDumbbell ? '<span class="dumbbell-badge">(한 손 무게 입력)</span>' : ''}
             </div>
             <div class="ex-target">${ex.sets}세트 × ${ex.targetReps}회</div>
           </div>
@@ -471,9 +473,15 @@
           const stateKey = `${currentDay}_${effectiveExId}_${s}`;
           const lastRecord = JSON.parse(localStorage.getItem(`last_${effectiveExId}_${s}`) || 'null');
           const curr = workoutState[stateKey] || {};
-          const weightPlaceholder = isAssist 
-            ? (lastRecord ? `${lastRecord.w} kg (보조)` : '보조(kg)')
-            : (lastRecord ? `${lastRecord.w} kg` : '무게(kg)');
+          
+          let weightPlaceholder = '무게(kg)';
+          if (isAssist) {
+            weightPlaceholder = lastRecord ? `${lastRecord.w} kg (보조)` : '보조(kg)';
+          } else if (isDumbbell) {
+            weightPlaceholder = lastRecord ? `${lastRecord.w} kg (한 손)` : '한 손(kg)';
+          } else if (lastRecord) {
+            weightPlaceholder = `${lastRecord.w} kg`;
+          }
 
           const row = document.createElement('div');
           row.className = 'set-row';
@@ -524,7 +532,7 @@
       renderApp();
     }
 
-    // 어시스트 종목(체중 - 보조핀무게) 반영 총 볼륨 계산
+    // 어시스트 역산 및 덤벨(x2) 반영 총 볼륨 계산
     function calculateTotalVolume() {
       let total = 0;
       const routine = ROUTINES[currentDay];
@@ -532,6 +540,7 @@
         routine.exercises.forEach(ex => {
           const effectiveExId = ex.biweekly ? `${ex.id}_${currentWeekType}` : ex.id;
           const isAssist = checkIsAssist(ex);
+          const isDumbbell = checkIsDumbbell(ex);
 
           for (let s = 1; s <= ex.sets; s++) {
             const stateKey = `${currentDay}_${effectiveExId}_${s}`;
@@ -539,8 +548,13 @@
               const inputW = parseFloat(workoutState[stateKey].w) || 0;
               const r = parseInt(workoutState[stateKey].r) || 0;
               
-              // 딥스 및 턱걸이는 (체중 - 보조무게)로 실제 부하 역산
-              const effectiveW = isAssist ? Math.max(0, userBodyweight - inputW) : inputW;
+              let effectiveW = inputW;
+              if (isAssist) {
+                effectiveW = Math.max(0, userBodyweight - inputW);
+              } else if (isDumbbell) {
+                effectiveW = inputW * 2;
+              }
+
               total += effectiveW * r;
             }
           }
@@ -549,19 +563,21 @@
       document.getElementById('summaryValue').innerText = `${total.toLocaleString()} kg`;
     }
 
+    // 수동 A/B 전환 및 영구 보존
     function toggleWeekType() {
       currentWeekType = currentWeekType === 'A' ? 'B' : 'A';
       localStorage.setItem('fitmaster_week_type', currentWeekType);
       renderApp();
     }
 
-    // --- 유산소 기능 (km 연동) ---
+    // --- 유산소 기능 (화면 꺼짐 방지 Wake Lock 및 5m 누적 거리 보정) ---
     let watchId = null;
     let runStartTime = null;
     let runDistanceKm = 0;
     let lastCoords = null;
     let runTimerInterval = null;
     let lastSpokenKm = 0;
+    let wakeLock = null;
 
     function renderCardioRoutine(routine, container) {
       document.getElementById('summaryTitle').innerText = '누적 러닝 거리';
@@ -573,7 +589,7 @@
       card.className = 'exercise-card running-box';
       card.innerHTML = `
         <div style="font-size:1.1rem; font-weight:bold; margin-bottom:4px;">🏃 실시간 GPS 러닝</div>
-        <div style="font-size:0.8rem; color:#888;">화면을 끄거나 음악을 들어도 GPS가 작동합니다.</div>
+        <div style="font-size:0.8rem; color:#888;">화면 꺼짐 방지(Wake Lock)가 자동 활성화됩니다.</div>
         
         <div class="running-metrics">
           <div class="metric-box">
@@ -624,11 +640,20 @@
       return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
     }
 
-    function startRunning() {
+    async function startRunning() {
       if (!navigator.geolocation) {
         alert("이 기기는 GPS 위치 기능을 지원하지 않습니다.");
         return;
       }
+
+      try {
+        if ('wakeLock' in navigator) {
+          wakeLock = await navigator.wakeLock.request('screen');
+        }
+      } catch (err) {
+        console.log("Wake Lock 미지원 또는 차단:", err);
+      }
+
       runDistanceKm = 0;
       lastCoords = null;
       lastSpokenKm = 0;
@@ -648,25 +673,34 @@
       watchId = navigator.geolocation.watchPosition(
         (pos) => {
           const { latitude, longitude, accuracy } = pos.coords;
-          if (accuracy > 30) return;
+          if (accuracy > 50) return;
 
-          if (lastCoords) {
-            const d = haversineDistance(lastCoords.lat, lastCoords.lon, latitude, longitude);
-            if (d > 0.003) {
-              runDistanceKm += d;
-              const distEl = document.getElementById('runDist');
-              if (distEl) distEl.innerText = runDistanceKm.toFixed(2);
+          const now = Date.now();
 
-              if (Math.floor(runDistanceKm) > lastSpokenKm) {
-                lastSpokenKm = Math.floor(runDistanceKm);
-                checkTtsAnnouncement(lastSpokenKm);
-              }
+          if (!lastCoords) {
+            lastCoords = { lat: latitude, lon: longitude, time: now };
+            return;
+          }
+
+          const d = haversineDistance(lastCoords.lat, lastCoords.lon, latitude, longitude);
+          const timeDiffHours = (now - lastCoords.time) / (1000 * 3600);
+          const speedKmh = d / (timeDiffHours || 0.0001);
+
+          if (d >= 0.005 && speedKmh < 35) {
+            runDistanceKm += d;
+            lastCoords = { lat: latitude, lon: longitude, time: now };
+
+            const distEl = document.getElementById('runDist');
+            if (distEl) distEl.innerText = runDistanceKm.toFixed(2);
+
+            if (Math.floor(runDistanceKm) > lastSpokenKm) {
+              lastSpokenKm = Math.floor(runDistanceKm);
+              checkTtsAnnouncement(lastSpokenKm);
             }
           }
-          lastCoords = { lat: latitude, lon: longitude };
         },
-        (err) => console.error(err),
-        { enableHighAccuracy: true, maximumAge: 1000, timeout: 10000 }
+        (err) => console.error("GPS 오류:", err),
+        { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 }
       );
     }
 
@@ -684,6 +718,10 @@
     function stopRunning() {
       if (watchId) navigator.geolocation.clearWatch(watchId);
       clearInterval(runTimerInterval);
+
+      if (wakeLock) {
+        wakeLock.release().then(() => { wakeLock = null; });
+      }
 
       const sec = Math.floor((Date.now() - runStartTime) / 1000);
       const m = String(Math.floor(sec / 60)).padStart(2, '0');
