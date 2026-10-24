@@ -31,10 +31,15 @@
     .sound-select { background: #2a2a2a; color: #fff; border: 1px solid #444; border-radius: 4px; padding: 4px 6px; font-size: 0.8rem; }
     .btn-action { background: #333; color: #fff; border: 1px solid #444; padding: 5px 10px; border-radius: 6px; font-size: 0.8rem; cursor: pointer; }
 
-    /* 롤 티어 & 스트릭 RPG 대시보드 카드 */
+    /* 롤 티어 & 스트릭 RPG 대시보드 */
     .rpg-card { background: linear-gradient(135deg, #182230, #141414); margin: 12px 16px 0; padding: 12px 14px; border-radius: 12px; border: 1px solid #2a3b50; }
     .rpg-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-    .tier-badge { font-size: 0.82rem; font-weight: bold; padding: 4px 10px; border-radius: 12px; background: #222; border: 1px solid #444; display: inline-flex; align-items: center; gap: 5px; }
+    .tier-badge { 
+      font-size: 0.82rem; font-weight: bold; padding: 5px 12px; border-radius: 12px; 
+      background: #222; border: 1px solid #444; display: inline-flex; align-items: center; gap: 6px; 
+      cursor: pointer; user-select: none; transition: transform 0.15s, opacity 0.15s;
+    }
+    .tier-badge:active { transform: scale(0.96); opacity: 0.85; }
     .streak-badge { font-size: 0.8rem; font-weight: bold; color: #ff9800; background: rgba(255,152,0,0.15); padding: 4px 8px; border-radius: 8px; }
     .lp-bar-container { background: #222; height: 10px; border-radius: 5px; overflow: hidden; margin-bottom: 6px; position: relative; }
     .lp-bar-fill { height: 100%; width: 0%; transition: width 0.4s ease; }
@@ -87,6 +92,48 @@
     .timer-text { font-size: 1.4rem; font-weight: bold; color: #64b5f6; }
     .timer-btns { display: flex; gap: 8px; }
     .btn-timer-action { background: #263849; border: 1px solid #3d5afe; color: #fff; padding: 6px 10px; border-radius: 6px; font-size: 0.8rem; cursor: pointer; }
+
+    /* 원터치 티어 로드맵 모달 */
+    .tier-modal-overlay {
+      display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.75); backdrop-filter: blur(4px);
+      z-index: 500; align-items: center; justify-content: center; padding: 16px;
+    }
+    .tier-modal-overlay.active { display: flex; }
+    .tier-modal-box {
+      background: #181c24; border: 1px solid #334155; border-radius: 14px;
+      width: 100%; max-width: 440px; max-height: 80vh;
+      display: flex; flex-direction: column; overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+    }
+    .tier-modal-header {
+      padding: 14px 16px; display: flex; justify-content: space-between; align-items: center;
+      border-bottom: 1px solid #2a3545; background: #131720;
+    }
+    .tier-modal-header h3 { font-size: 1rem; color: #fff; }
+    .tier-modal-close {
+      background: none; border: none; color: #aaa; font-size: 1.4rem; cursor: pointer; padding: 0 4px; line-height: 1;
+    }
+    .tier-modal-body {
+      flex: 1; overflow-y: auto; padding: 8px 12px;
+    }
+    .tier-table {
+      width: 100%; border-collapse: collapse; font-size: 0.8rem; text-align: left;
+    }
+    .tier-table th {
+      position: sticky; top: 0; background: #181c24; padding: 8px 6px;
+      color: #94a3b8; border-bottom: 1px solid #334155; font-weight: 600;
+    }
+    .tier-table td {
+      padding: 8px 6px; border-bottom: 1px solid #202733; color: #e2e8f0;
+    }
+    .tier-row.current-rank {
+      background: rgba(30, 136, 229, 0.22); font-weight: bold;
+    }
+    .my-rank-tag {
+      font-size: 0.65rem; background: var(--accent); color: #fff;
+      padding: 2px 6px; border-radius: 4px; margin-left: 4px; white-space: nowrap;
+    }
   </style>
 </head>
 <body>
@@ -120,10 +167,10 @@
     </div>
   </header>
 
-  <!-- 롤 티어 & 스트릭 RPG 대시보드 -->
+  <!-- 롤 티어 & 스트릭 RPG 대시보드 (뱃지 터치 시 티어표 모달 오픈) -->
   <div class="rpg-card">
     <div class="rpg-top">
-      <div class="tier-badge" id="tierBadge">로딩 중...</div>
+      <div class="tier-badge" id="tierBadge" onclick="openTierModal()" title="터치하여 전체 티어표 확인">로딩 중...</div>
       <div class="streak-badge" id="streakBadge">🔥 0일 스트릭</div>
     </div>
     <div class="lp-bar-container">
@@ -176,8 +223,38 @@
     </div>
   </div>
 
+  <!-- 원터치 티어 로드맵 모달 (배경 터치 시 닫힘) -->
+  <div class="tier-modal-overlay" id="tierModal" onclick="closeTierModal(event)">
+    <div class="tier-modal-box" onclick="event.stopPropagation()">
+      <div class="tier-modal-header">
+        <h3>🛡️ 롤 티어 로드맵</h3>
+        <button class="tier-modal-close" onclick="closeTierModal()">&times;</button>
+      </div>
+      <div class="tier-modal-body" id="tierModalBody">
+        <table class="tier-table">
+          <thead>
+            <tr>
+              <th style="width: 32%;">티어</th>
+              <th style="width: 38%;">칭호</th>
+              <th style="width: 30%; text-align: right;">필요 EXP</th>
+            </tr>
+          </thead>
+          <tbody id="tierTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
   <script>
-    // --- 31단계 LoL 랭크 정의 (기준 EXP, 색상, 칭호) ---
+    function getTodayStr() {
+      const d = new Date();
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    // 31단계 LoL 랭크 정의
     const LOL_RANKS = [
       { tier: "아이언 IV", exp: 0, title: "빈 봉 봇", color: "#6e6e6e" },
       { tier: "아이언 III", exp: 10000, title: "샤워장 탐험가", color: "#6e6e6e" },
@@ -265,11 +342,27 @@
     let soundPreset = localStorage.getItem('fitmaster_sound_preset') || 'airhorn';
     let userBodyweight = parseFloat(localStorage.getItem('fitmaster_bodyweight') || '75');
 
-    // 게이미피케이션 상태 변수
     let userTotalExp = parseFloat(localStorage.getItem('fitmaster_total_exp') || '0');
     let userStreak = parseInt(localStorage.getItem('fitmaster_streak') || '0');
     let lastWorkoutDate = localStorage.getItem('fitmaster_last_date') || '';
     let muscleMemoryBuff = parseInt(localStorage.getItem('fitmaster_buff_sessions') || '0');
+
+    // 다음 날 자정 기준 체크박스 자동 비활성화
+    function resetDailyCheckboxes() {
+      const today = getTodayStr();
+      let updated = false;
+      for (const key in workoutState) {
+        if (workoutState[key] && workoutState[key].done) {
+          if (workoutState[key].date !== today) {
+            workoutState[key].done = false;
+            updated = true;
+          }
+        }
+      }
+      if (updated) {
+        localStorage.setItem('fitmaster_state', JSON.stringify(workoutState));
+      }
+    }
 
     function initSoundSettings() {
       const slider = document.getElementById('timerVolume');
@@ -299,27 +392,24 @@
       calculateTotalVolume();
     }
 
-    // --- 7일 유예 + 휴면 감쇠(Decay) 및 머슬 메모리 판정 ---
+    // 7일 유예 + 8일차 감쇠 및 48시간 스트릭 점검
     function checkDecayAndStreak() {
-      const today = new Date().toISOString().slice(0, 10);
+      const today = getTodayStr();
       if (!lastWorkoutDate) return;
 
       const diffDays = Math.floor((new Date(today) - new Date(lastWorkoutDate)) / (1000 * 3600 * 24));
 
-      // 스트릭 판정: 2일 이상 미운동 시 스트릭 초기화 (휴식일 1일은 방어)
       if (diffDays > 2) {
         userStreak = 0;
         localStorage.setItem('fitmaster_streak', '0');
       }
 
-      // 휴면 감쇠 판정: 7일 디로딩 유예, 8일 차부터 매일 -5 LP (하루 약 350 EXP 차감)
       if (diffDays >= 8) {
         const decayDays = diffDays - 7;
         const decayExp = decayDays * 350;
         userTotalExp = Math.max(0, userTotalExp - decayExp);
         localStorage.setItem('fitmaster_total_exp', userTotalExp);
 
-        // 강등 겪은 유저에게 복귀 시 3회 세션 2배 버프 부여
         muscleMemoryBuff = 3;
         localStorage.setItem('fitmaster_buff_sessions', '3');
       }
@@ -328,16 +418,15 @@
     function addExp(amount) {
       let multiplier = 1;
       if (muscleMemoryBuff > 0) {
-        multiplier = 2; // 머슬 메모리 버프 발동 시 2배
+        multiplier = 2;
       }
       userTotalExp += (amount * multiplier);
       localStorage.setItem('fitmaster_total_exp', userTotalExp);
       
-      const today = new Date().toISOString().slice(0, 10);
+      const today = getTodayStr();
       if (lastWorkoutDate !== today) {
-        // 어제 운동했으면 스트릭 +1, 아니면 1로 시작
         const diffDays = lastWorkoutDate ? Math.floor((new Date(today) - new Date(lastWorkoutDate)) / (1000 * 3600 * 24)) : 0;
-        userStreak = (diffDays === 1) ? userStreak + 1 : 1;
+        userStreak = (diffDays === 1 || diffDays === 2) ? userStreak + 1 : 1;
         lastWorkoutDate = today;
         localStorage.setItem('fitmaster_streak', userStreak);
         localStorage.setItem('fitmaster_last_date', lastWorkoutDate);
@@ -350,15 +439,19 @@
       renderRpgUI();
     }
 
-    function renderRpgUI() {
-      let curRankIdx = 0;
+    function getCurrentRankIndex() {
+      let cur = 0;
       for (let i = LOL_RANKS.length - 1; i >= 0; i--) {
         if (userTotalExp >= LOL_RANKS[i].exp) {
-          curRankIdx = i;
+          cur = i;
           break;
         }
       }
+      return cur;
+    }
 
+    function renderRpgUI() {
+      const curRankIdx = getCurrentRankIndex();
       const curRank = LOL_RANKS[curRankIdx];
       const nextRank = LOL_RANKS[curRankIdx + 1];
 
@@ -370,7 +463,7 @@
       }
 
       const badge = document.getElementById('tierBadge');
-      badge.innerText = `🛡️ [${curRank.tier}] ${curRank.title}`;
+      badge.innerHTML = `🛡️ [${curRank.tier}] ${curRank.title} <span style="font-size:0.7rem; color:#aaa;">🔍</span>`;
       badge.style.borderColor = curRank.color;
       badge.style.color = curRank.color;
 
@@ -390,7 +483,45 @@
       }
     }
 
-    // --- 고출력 다이내믹스 컴프레서 알림음 엔진 ---
+    // --- 티어 로드맵 모달 열기 & 닫기 로직 ---
+    function openTierModal() {
+      const tbody = document.getElementById('tierTableBody');
+      tbody.innerHTML = '';
+      const curRankIdx = getCurrentRankIndex();
+
+      LOL_RANKS.forEach((rank, idx) => {
+        const isCurrent = (idx === curRankIdx);
+        const tr = document.createElement('tr');
+        tr.className = `tier-row ${isCurrent ? 'current-rank' : ''}`;
+        if (isCurrent) tr.id = 'currentRankRow';
+
+        tr.innerHTML = `
+          <td style="color:${rank.color}; font-weight:bold;">
+            ${rank.tier}
+            ${isCurrent ? '<span class="my-rank-tag">내 위치</span>' : ''}
+          </td>
+          <td>${rank.title}</td>
+          <td style="text-align: right; font-family: monospace;">${rank.exp.toLocaleString()}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      const modal = document.getElementById('tierModal');
+      modal.classList.add('active');
+
+      // 내 현재 위치로 부드럽게 스크롤 자동 이동
+      setTimeout(() => {
+        const target = document.getElementById('currentRankRow');
+        if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 100);
+    }
+
+    function closeTierModal(e) {
+      if (e && e.target !== e.currentTarget && !e.target.classList.contains('tier-modal-close')) return;
+      document.getElementById('tierModal').classList.remove('active');
+    }
+
+    // --- 고출력 오디오 알림 엔진 ---
     function triggerNonIntrusiveAlert() {
       if (navigator.vibrate) {
         navigator.vibrate([300, 100, 300, 100, 700]);
@@ -494,7 +625,7 @@
       triggerNonIntrusiveAlert();
     }
 
-    // --- 휴식 타이머 (Date.now + 백그라운드 밀림 방지) ---
+    // --- 휴식 타이머 (백그라운드 보정) ---
     let timerInterval = null;
     let timerRemaining = 60;
     let targetEndTime = 0;
@@ -673,16 +804,22 @@
       const rInput = document.getElementById(`r_${stateKey}`);
       const weight = parseFloat(wInput.value) || 0;
       const reps = parseInt(rInput.value) || 0;
+      const today = getTodayStr();
 
       if (!workoutState[stateKey]) workoutState[stateKey] = {};
       const isDone = !workoutState[stateKey].done;
-      workoutState[stateKey] = { w: weight, r: reps, done: isDone };
+      
+      workoutState[stateKey] = { 
+        w: weight, 
+        r: reps, 
+        done: isDone, 
+        date: isDone ? today : null 
+      };
       localStorage.setItem('fitmaster_state', JSON.stringify(workoutState));
 
       if (isDone) {
         localStorage.setItem(`last_${effectiveExId}_${setIndex}`, JSON.stringify({ w: weight, r: reps }));
         
-        // 세트 완료 시 볼륨 = EXP로 환산하여 적립
         let setEffectiveW = weight;
         if (isAssist) setEffectiveW = Math.max(0, userBodyweight - weight);
         else if (isDumbbell) setEffectiveW = weight * 2;
@@ -731,7 +868,7 @@
       renderApp();
     }
 
-    // --- 유산소 기능 (5m 보정 + Wake Lock) ---
+    // --- 유산소 러닝 기능 ---
     let watchId = null;
     let runStartTime = null;
     let runDistanceKm = 0;
@@ -901,7 +1038,6 @@
       history.push(record);
       localStorage.setItem('fitmaster_run_history', JSON.stringify(history));
 
-      // 러닝 1km당 1,000 EXP 부여
       const cardioExp = Math.floor(runDistanceKm * 1000);
       if (cardioExp > 0) addExp(cardioExp);
 
@@ -909,7 +1045,7 @@
       renderApp();
     }
 
-    // --- 백업 / 복원 ---
+    // --- 데이터 백업 및 복원 ---
     document.getElementById('btnExport').onclick = () => {
       const data = JSON.stringify(localStorage);
       const blob = new Blob([data], { type: 'application/json' });
@@ -949,6 +1085,8 @@
       navigator.serviceWorker.register('./sw.js').catch(err => console.log(err));
     }
 
+    // 시스템 초기화
+    resetDailyCheckboxes();
     checkDecayAndStreak();
     initSoundSettings();
     renderApp();
