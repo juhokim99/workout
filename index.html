@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>FitMaster 운동 관리</title>
+  <title>FitMaster Pro</title>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#1e88e5">
   <style>
@@ -19,26 +19,35 @@
     }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; }
     body { background-color: var(--bg); color: var(--text); padding-bottom: 90px; }
-    header { background-color: #181818; padding: 16px; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid var(--border); }
+    header { background-color: #181818; padding: 14px 16px; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid var(--border); }
     .header-top { display: flex; justify-content: space-between; align-items: center; }
     .title { font-size: 1.25rem; font-weight: bold; color: var(--accent-glow); }
     
-    /* 고출력 타이머 알림음 설정 툴바 */
+    /* 고출력 타이머 알림음 설정 */
     .alert-settings { background: #222222; border-radius: 8px; padding: 10px; margin-top: 10px; border: 1px solid #333; }
     .alert-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 0.8rem; color: #ccc; }
     .alert-row:last-child { margin-bottom: 0; }
     .vol-slider { flex: 1; accent-color: var(--accent); cursor: pointer; }
     .sound-select { background: #2a2a2a; color: #fff; border: 1px solid #444; border-radius: 4px; padding: 4px 6px; font-size: 0.8rem; }
     .btn-action { background: #333; color: #fff; border: 1px solid #444; padding: 5px 10px; border-radius: 6px; font-size: 0.8rem; cursor: pointer; }
-    .btn-action:active { background: var(--accent); }
+
+    /* 롤 티어 & 스트릭 RPG 대시보드 카드 */
+    .rpg-card { background: linear-gradient(135deg, #182230, #141414); margin: 12px 16px 0; padding: 12px 14px; border-radius: 12px; border: 1px solid #2a3b50; }
+    .rpg-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .tier-badge { font-size: 0.82rem; font-weight: bold; padding: 4px 10px; border-radius: 12px; background: #222; border: 1px solid #444; display: inline-flex; align-items: center; gap: 5px; }
+    .streak-badge { font-size: 0.8rem; font-weight: bold; color: #ff9800; background: rgba(255,152,0,0.15); padding: 4px 8px; border-radius: 8px; }
+    .lp-bar-container { background: #222; height: 10px; border-radius: 5px; overflow: hidden; margin-bottom: 6px; position: relative; }
+    .lp-bar-fill { height: 100%; width: 0%; transition: width 0.4s ease; }
+    .rpg-bottom { display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--text-muted); }
+    .buff-badge { font-size: 0.72rem; color: #ffd54f; margin-top: 4px; }
     
-    /* 요일 탭 (월~토) */
-    .day-tabs { display: flex; overflow-x: auto; gap: 6px; padding: 12px 16px; background: #161616; border-bottom: 1px solid var(--border); }
+    /* 요일 탭 */
+    .day-tabs { display: flex; overflow-x: auto; gap: 6px; padding: 12px 16px; background: #161616; border-bottom: 1px solid var(--border); margin-top: 10px; }
     .day-tab { padding: 6px 14px; border-radius: 16px; background: #262626; color: var(--text-muted); font-size: 0.85rem; border: none; cursor: pointer; white-space: nowrap; }
     .day-tab.active { background: var(--accent); color: #fff; font-weight: bold; }
 
-    /* 대시보드 카드 */
-    .summary-card { background: var(--card-bg); margin: 14px 16px; padding: 14px; border-radius: 12px; border: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+    /* 요약 카드 */
+    .summary-card { background: var(--card-bg); margin: 12px 16px; padding: 14px; border-radius: 12px; border: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
     .summary-title { font-size: 0.8rem; color: var(--text-muted); }
     .summary-val { font-size: 1.3rem; font-weight: bold; color: var(--accent-glow); margin-top: 4px; }
     .bodyweight-input { width: 50px; background: #151515; border: 1px solid #444; color: #fff; text-align: center; border-radius: 4px; padding: 2px 4px; font-size: 0.8rem; }
@@ -57,11 +66,10 @@
     .set-row { display: grid; grid-template-columns: 36px 1fr 1fr 48px; gap: 6px; align-items: center; margin-bottom: 8px; }
     .set-num { font-size: 0.85rem; color: var(--text-muted); text-align: center; }
     .input-box { background: #151515; border: 1px solid #383838; color: #fff; padding: 8px; border-radius: 6px; font-size: 0.95rem; text-align: center; width: 100%; }
-    .input-box::placeholder { color: #555; font-size: 0.8rem; }
     .btn-complete { background: #2a2a2a; border: 1px solid #444; color: #aaa; border-radius: 6px; padding: 8px 0; font-size: 0.85rem; font-weight: bold; cursor: pointer; }
     .btn-complete.done { background: var(--success); color: #000; border-color: var(--success); }
 
-    /* 유산소 러닝 화면 */
+    /* 유산소 러닝 */
     .running-box { text-align: center; padding: 20px 0; }
     .running-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 16px 0; }
     .metric-box { background: #161616; padding: 14px; border-radius: 10px; border: 1px solid #2e2e2e; }
@@ -73,7 +81,7 @@
     .btn-start { background: var(--success); color: #000; }
     .btn-stop { background: #d32f2f; color: #fff; }
 
-    /* 휴식 타이머 플로팅 바 */
+    /* 휴식 타이머 바 */
     .timer-overlay { position: fixed; bottom: 0; left: 0; right: 0; background: #182834; border-top: 2px solid var(--accent); padding: 12px 16px; display: none; justify-content: space-between; align-items: center; z-index: 200; box-shadow: 0 -4px 12px rgba(0,0,0,0.5); }
     .timer-overlay.active { display: flex; }
     .timer-text { font-size: 1.4rem; font-weight: bold; color: #64b5f6; }
@@ -111,6 +119,22 @@
       </div>
     </div>
   </header>
+
+  <!-- 롤 티어 & 스트릭 RPG 대시보드 -->
+  <div class="rpg-card">
+    <div class="rpg-top">
+      <div class="tier-badge" id="tierBadge">로딩 중...</div>
+      <div class="streak-badge" id="streakBadge">🔥 0일 스트릭</div>
+    </div>
+    <div class="lp-bar-container">
+      <div class="lp-bar-fill" id="lpBarFill"></div>
+    </div>
+    <div class="rpg-bottom">
+      <span id="lpText">0 LP</span>
+      <span id="totalExpText">누적 0 EXP</span>
+    </div>
+    <div class="buff-badge" id="buffStatus"></div>
+  </div>
 
   <!-- 요일 선택 탭 (월~토) -->
   <div class="day-tabs" id="dayTabs">
@@ -153,6 +177,41 @@
   </div>
 
   <script>
+    // --- 31단계 LoL 랭크 정의 (기준 EXP, 색상, 칭호) ---
+    const LOL_RANKS = [
+      { tier: "아이언 IV", exp: 0, title: "빈 봉 봇", color: "#6e6e6e" },
+      { tier: "아이언 III", exp: 10000, title: "샤워장 탐험가", color: "#6e6e6e" },
+      { tier: "아이언 II", exp: 20000, title: "스트레칭 장인", color: "#6e6e6e" },
+      { tier: "아이언 I", exp: 30000, title: "빈 봉 탈출반", color: "#6e6e6e" },
+      { tier: "브론즈 IV", exp: 45000, title: "심해의 쉐이커", color: "#a97142" },
+      { tier: "브론즈 III", exp: 65000, title: "원판 셔틀", color: "#a97142" },
+      { tier: "브론즈 II", exp: 90000, title: "머신 독점러", color: "#a97142" },
+      { tier: "브론즈 I", exp: 120000, title: "실버 승급 도전자", color: "#a97142" },
+      { tier: "실버 IV", exp: 155000, title: "과부하 입문자", color: "#b0bec5" },
+      { tier: "실버 III", exp: 195000, title: "근육통 즐겜러", color: "#b0bec5" },
+      { tier: "실버 II", exp: 240000, title: "덤벨 저격수", color: "#b0bec5" },
+      { tier: "실버 I", exp: 290000, title: "황금 티어 지망생", color: "#b0bec5" },
+      { tier: "골드 IV", exp: 350000, title: "승리의 스트롱맨", color: "#ffb300" },
+      { tier: "골드 III", exp: 420000, title: "스트랩 장착자", color: "#ffb300" },
+      { tier: "골드 II", exp: 500000, title: "체육관 오더 장인", color: "#ffb300" },
+      { tier: "골드 I", exp: 590000, title: "플래티넘 수문장", color: "#ffb300" },
+      { tier: "플래티넘 IV", exp: 690000, title: "라인전 강자", color: "#26c6da" },
+      { tier: "플래티넘 III", exp: 800000, title: "중량 벨트 착용자", color: "#26c6da" },
+      { tier: "플래티넘 II", exp: 920000, title: "고중량 캐리머신", color: "#26c6da" },
+      { tier: "플래티넘 I", exp: 1050000, title: "에메랄드 벽 탐색자", color: "#26c6da" },
+      { tier: "에메랄드 IV", exp: 1200000, title: "통곡의 3대 벽", color: "#00e676" },
+      { tier: "에메랄드 III", exp: 1370000, title: "산소 결핍 극복자", color: "#00e676" },
+      { tier: "에메랄드 II", exp: 1560000, title: "피지컬 괴물", color: "#00e676" },
+      { tier: "에메랄드 I", exp: 1770000, title: "다이아 승급 심사생", color: "#00e676" },
+      { tier: "다이아몬드 IV", exp: 2000000, title: "중력 거역자", color: "#42a5f5" },
+      { tier: "다이아몬드 III", exp: 2260000, title: "거울 파괴자", color: "#42a5f5" },
+      { tier: "다이아몬드 II", exp: 2540000, title: "3대 500의 망령", color: "#42a5f5" },
+      { tier: "다이아몬드 I", exp: 2850000, title: "천상계 입구 컷", color: "#42a5f5" },
+      { tier: "마스터", exp: 3200000, title: "인간 기중기", color: "#ab47bc" },
+      { tier: "그랜드마스터", exp: 4800000, title: "체육관 랭커", color: "#ef5350" },
+      { tier: "챌린저", exp: 7000000, title: "서버 1황 올림피아", color: "#ffd700" }
+    ];
+
     const ROUTINES = {
       2: {
         type: 'weight',
@@ -193,7 +252,6 @@
       5: { type: 'cardio', title: '금요일: 유산소 러닝' }
     };
 
-    // 자동 주차 계산 완전 제거 -> 사용자가 선택한 루틴을 영구 유지 (기본값: 'A')
     function getWeekType() {
       return localStorage.getItem('fitmaster_week_type') || 'A';
     }
@@ -206,6 +264,12 @@
     let timerVolume = parseInt(localStorage.getItem('fitmaster_timer_vol') || '100');
     let soundPreset = localStorage.getItem('fitmaster_sound_preset') || 'airhorn';
     let userBodyweight = parseFloat(localStorage.getItem('fitmaster_bodyweight') || '75');
+
+    // 게이미피케이션 상태 변수
+    let userTotalExp = parseFloat(localStorage.getItem('fitmaster_total_exp') || '0');
+    let userStreak = parseInt(localStorage.getItem('fitmaster_streak') || '0');
+    let lastWorkoutDate = localStorage.getItem('fitmaster_last_date') || '';
+    let muscleMemoryBuff = parseInt(localStorage.getItem('fitmaster_buff_sessions') || '0');
 
     function initSoundSettings() {
       const slider = document.getElementById('timerVolume');
@@ -233,6 +297,97 @@
       userBodyweight = parseFloat(val) || 0;
       localStorage.setItem('fitmaster_bodyweight', userBodyweight);
       calculateTotalVolume();
+    }
+
+    // --- 7일 유예 + 휴면 감쇠(Decay) 및 머슬 메모리 판정 ---
+    function checkDecayAndStreak() {
+      const today = new Date().toISOString().slice(0, 10);
+      if (!lastWorkoutDate) return;
+
+      const diffDays = Math.floor((new Date(today) - new Date(lastWorkoutDate)) / (1000 * 3600 * 24));
+
+      // 스트릭 판정: 2일 이상 미운동 시 스트릭 초기화 (휴식일 1일은 방어)
+      if (diffDays > 2) {
+        userStreak = 0;
+        localStorage.setItem('fitmaster_streak', '0');
+      }
+
+      // 휴면 감쇠 판정: 7일 디로딩 유예, 8일 차부터 매일 -5 LP (하루 약 350 EXP 차감)
+      if (diffDays >= 8) {
+        const decayDays = diffDays - 7;
+        const decayExp = decayDays * 350;
+        userTotalExp = Math.max(0, userTotalExp - decayExp);
+        localStorage.setItem('fitmaster_total_exp', userTotalExp);
+
+        // 강등 겪은 유저에게 복귀 시 3회 세션 2배 버프 부여
+        muscleMemoryBuff = 3;
+        localStorage.setItem('fitmaster_buff_sessions', '3');
+      }
+    }
+
+    function addExp(amount) {
+      let multiplier = 1;
+      if (muscleMemoryBuff > 0) {
+        multiplier = 2; // 머슬 메모리 버프 발동 시 2배
+      }
+      userTotalExp += (amount * multiplier);
+      localStorage.setItem('fitmaster_total_exp', userTotalExp);
+      
+      const today = new Date().toISOString().slice(0, 10);
+      if (lastWorkoutDate !== today) {
+        // 어제 운동했으면 스트릭 +1, 아니면 1로 시작
+        const diffDays = lastWorkoutDate ? Math.floor((new Date(today) - new Date(lastWorkoutDate)) / (1000 * 3600 * 24)) : 0;
+        userStreak = (diffDays === 1) ? userStreak + 1 : 1;
+        lastWorkoutDate = today;
+        localStorage.setItem('fitmaster_streak', userStreak);
+        localStorage.setItem('fitmaster_last_date', lastWorkoutDate);
+
+        if (muscleMemoryBuff > 0) {
+          muscleMemoryBuff--;
+          localStorage.setItem('fitmaster_buff_sessions', muscleMemoryBuff);
+        }
+      }
+      renderRpgUI();
+    }
+
+    function renderRpgUI() {
+      let curRankIdx = 0;
+      for (let i = LOL_RANKS.length - 1; i >= 0; i--) {
+        if (userTotalExp >= LOL_RANKS[i].exp) {
+          curRankIdx = i;
+          break;
+        }
+      }
+
+      const curRank = LOL_RANKS[curRankIdx];
+      const nextRank = LOL_RANKS[curRankIdx + 1];
+
+      let lp = 100;
+      if (nextRank) {
+        const span = nextRank.exp - curRank.exp;
+        const gained = userTotalExp - curRank.exp;
+        lp = Math.min(99, Math.floor((gained / span) * 100));
+      }
+
+      const badge = document.getElementById('tierBadge');
+      badge.innerText = `🛡️ [${curRank.tier}] ${curRank.title}`;
+      badge.style.borderColor = curRank.color;
+      badge.style.color = curRank.color;
+
+      const bar = document.getElementById('lpBarFill');
+      bar.style.width = `${lp}%`;
+      bar.style.backgroundColor = curRank.color;
+
+      document.getElementById('lpText').innerText = `${lp} LP`;
+      document.getElementById('totalExpText').innerText = `누적 ${Math.floor(userTotalExp).toLocaleString()} EXP`;
+      document.getElementById('streakBadge').innerText = `🔥 ${userStreak}일 스트릭`;
+
+      const buffBox = document.getElementById('buffStatus');
+      if (muscleMemoryBuff > 0) {
+        buffBox.innerText = `⚡ 머슬 메모리 가동 중 (EXP 2배 획득, 잔여 ${muscleMemoryBuff}회 세션)`;
+      } else {
+        buffBox.innerText = '';
+      }
     }
 
     // --- 고출력 다이내믹스 컴프레서 알림음 엔진 ---
@@ -339,7 +494,7 @@
       triggerNonIntrusiveAlert();
     }
 
-    // --- 휴식 타이머 로직 (절대 시각 Date.now 기반 백그라운드 보정) ---
+    // --- 휴식 타이머 (Date.now + 백그라운드 밀림 방지) ---
     let timerInterval = null;
     let timerRemaining = 60;
     let targetEndTime = 0;
@@ -424,16 +579,15 @@
         if (bwBox) bwBox.style.display = 'none';
         renderCardioRoutine(routine, content);
       }
+      renderRpgUI();
     }
 
-    // 어시스트 판별
     function checkIsAssist(ex) {
       if (ex.isAssist) return true;
       if (ex.biweekly && currentWeekType === 'B' && ex.isAssistB) return true;
       return false;
     }
 
-    // 덤벨 판별
     function checkIsDumbbell(ex) {
       if (ex.isDumbbell) return true;
       if (ex.biweekly && currentWeekType === 'B' && ex.isDumbbellB) return true;
@@ -489,7 +643,7 @@
             <div class="set-num">${s}S</div>
             <input type="number" class="input-box" placeholder="${weightPlaceholder}" value="${curr.w !== undefined ? curr.w : ''}" id="w_${stateKey}" oninput="updateSetInput('${stateKey}')">
             <input type="number" class="input-box" placeholder="${lastRecord ? lastRecord.r + ' 회' : ex.targetReps + '회'}" value="${curr.r !== undefined ? curr.r : ''}" id="r_${stateKey}" oninput="updateSetInput('${stateKey}')">
-            <button class="btn-complete ${curr.done ? 'done' : ''}" onclick="toggleSetDone('${stateKey}', '${effectiveExId}', ${s})">✓</button>
+            <button class="btn-complete ${curr.done ? 'done' : ''}" onclick="toggleSetDone('${stateKey}', '${effectiveExId}', ${s}, ${isAssist}, ${isDumbbell})">✓</button>
           `;
           setsContainer.appendChild(row);
         }
@@ -514,7 +668,7 @@
       localStorage.setItem(key, val);
     }
 
-    function toggleSetDone(stateKey, effectiveExId, setIndex) {
+    function toggleSetDone(stateKey, effectiveExId, setIndex, isAssist, isDumbbell) {
       const wInput = document.getElementById(`w_${stateKey}`);
       const rInput = document.getElementById(`r_${stateKey}`);
       const weight = parseFloat(wInput.value) || 0;
@@ -527,12 +681,20 @@
 
       if (isDone) {
         localStorage.setItem(`last_${effectiveExId}_${setIndex}`, JSON.stringify({ w: weight, r: reps }));
+        
+        // 세트 완료 시 볼륨 = EXP로 환산하여 적립
+        let setEffectiveW = weight;
+        if (isAssist) setEffectiveW = Math.max(0, userBodyweight - weight);
+        else if (isDumbbell) setEffectiveW = weight * 2;
+        
+        const setVolume = setEffectiveW * reps;
+        if (setVolume > 0) addExp(setVolume);
+
         startRestTimer(60);
       }
       renderApp();
     }
 
-    // 어시스트 역산 및 덤벨(x2) 반영 총 볼륨 계산
     function calculateTotalVolume() {
       let total = 0;
       const routine = ROUTINES[currentDay];
@@ -563,14 +725,13 @@
       document.getElementById('summaryValue').innerText = `${total.toLocaleString()} kg`;
     }
 
-    // 수동 A/B 전환 및 영구 보존
     function toggleWeekType() {
       currentWeekType = currentWeekType === 'A' ? 'B' : 'A';
       localStorage.setItem('fitmaster_week_type', currentWeekType);
       renderApp();
     }
 
-    // --- 유산소 기능 (화면 꺼짐 방지 Wake Lock 및 5m 누적 거리 보정) ---
+    // --- 유산소 기능 (5m 보정 + Wake Lock) ---
     let watchId = null;
     let runStartTime = null;
     let runDistanceKm = 0;
@@ -676,7 +837,6 @@
           if (accuracy > 50) return;
 
           const now = Date.now();
-
           if (!lastCoords) {
             lastCoords = { lat: latitude, lon: longitude, time: now };
             return;
@@ -741,11 +901,15 @@
       history.push(record);
       localStorage.setItem('fitmaster_run_history', JSON.stringify(history));
 
-      alert(`러닝 종료! 기록이 저장되었습니다.\n거리: ${record.dist}km | 시간: ${record.time}`);
+      // 러닝 1km당 1,000 EXP 부여
+      const cardioExp = Math.floor(runDistanceKm * 1000);
+      if (cardioExp > 0) addExp(cardioExp);
+
+      alert(`러닝 종료! 기록이 저장되었습니다.\n거리: ${record.dist}km | 시간: ${record.time}\n획득 경험치: +${cardioExp.toLocaleString()} EXP`);
       renderApp();
     }
 
-    // --- 데이터 백업 및 복원 ---
+    // --- 백업 / 복원 ---
     document.getElementById('btnExport').onclick = () => {
       const data = JSON.stringify(localStorage);
       const blob = new Blob([data], { type: 'application/json' });
@@ -785,6 +949,7 @@
       navigator.serviceWorker.register('./sw.js').catch(err => console.log(err));
     }
 
+    checkDecayAndStreak();
     initSoundSettings();
     renderApp();
   </script>
